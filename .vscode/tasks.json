@@ -1,0 +1,38 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "type": "shell",
+            "label": "SDL2",
+            "command": "C:\\mingw64\\bin\\g++.exe",
+            "args": [
+                "-g",
+                "src\\*.c",
+                "-o",
+                "build\\${fileBasenameNoExtension}.exe",
+                "-IC:\\SDL2\\SDL2-2.30.2\\x86_64-w64-mingw32\\include\\SDL2",
+                "-IC:\\SDL2\\SDL2_image-2.8.2\\x86_64-w64-mingw32\\include\\SDL2",
+                "-IC:\\SDL2\\SDL2_ttf-2.22.0\\x86_64-w64-mingw32\\include\\SDL2",
+                "-LC:\\SDL2\\SDL2-2.30.2\\x86_64-w64-mingw32\\lib",
+                "-LC:\\SDL2\\SDL2_image-2.8.2\\x86_64-w64-mingw32\\lib",
+                "-LC:\\SDL2\\SDL2_ttf-2.22.0\\x86_64-w64-mingw32\\lib",
+                "-lmingw32",
+                "-lSDL2main",
+                "-lSDL2",
+                "-lSDL2_image",
+                "-lSDL2_ttf",
+                "-mwindows"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        }
+    ]
+}
