@@ -2,10 +2,11 @@
 #include <SDL_ttf.h> // Libreria que nos permite manejar texto que queramos mostrar en pantalla
 #include <stdio.h>   // Libreria estandar para input y outpunt de c
 #include <math.h>   // libreria que nos permite realizar operaciones matematematicas
-#include <stdlib.h> // libria de c , de ella utilizamos funciones como Atoi, size_t y la constante NULL
+#include <stdlib.h> // libreria de c , de ella utilizamos funciones como Atoi, size_t y la constante NULL
 #include <time.h> // libreria que nos permite acceder al tiempo de la maquina donde se ejecuta el programa
 #include <string.h> // Libreria que nos expande el uso y las posibilidades de manipulacion para cadenas de Chars
 #include <ctype.h> // Libreria para cadenas en este codigo usada la funcion toLower
+
 #define WINDOW_WIDTH 790 // Definimos el ancho de la ventana
 #define WINDOW_HEIGHT 640 // Definimos la altura de la ventana
 
@@ -66,8 +67,11 @@ int BinarySearchUserNameInGraphics ( char userNameToSearch[], GRAPHICS* result )
 int GetQuantityUserGraphics ( char userName[] );
 void GetUserGraphicsVector ( char userName[], GRAPHICS userGraphicsVector[] );
 
+int DeleteAllUserGraphics ( char userName[] );
 int DeleteGraphic ( char userName[], char graphicKey[] );
 int BinarySearchGraphicKey ( char graphicKey[], GRAPHICS* result );
+
+void crearTexto(SDL_Renderer *renderer, TTF_Font *font, SDL_Color white, char string[], int posX , int posY);
 
 //Funcion para comparar dos mismos elementos de un un campo en un array de estructuras USER
 /*struct0: primera estructura para comparar, struct1: ssegunda estructura para comparar, field: campo en el que se comparara*/
@@ -414,15 +418,29 @@ void EncryptPasswordDisplacement( USER *userToEncryptPassword, int displacement 
     return;
 }//end function EncryptPaaswordDisplacement( USER *userToEncryptPassword, int displacement )
 
+
 /*Funcion para encriptar contraseñas de los usuarios
 user: usuario al cual se le encriptara la contraseña*/
 void EncryptPassword ( USER *user ) {
+    //archivo “seguridad.gra” donde se guardara el valor desplazamiento y palabra clave que fueron aplicadas a las contraseñas
+    FILE* file;
     //keyWord: palabra clave con la que se encriptara
     char keyWord[22] = "yisankedEgrINpumcJotA";
     //displacement: desplazamiento con el que encriptara
     int displacement = 18;
     EncryptPasswordWordKey ( user, keyWord );
     EncryptPasswordDisplacement ( user, displacement );
+    //se abre "seguridad.gra" para despues comparar la ultima 
+    file = fopen ( "seguridad.gra", "rb" );
+    //si el archivo "seguridad.gra" no existe entonces se crea
+    if ( file == NULL ) {
+        file = fopen ( "seguridad.gra", "wb" );
+        fwrite ( &displacement, sizeof ( displacement ), 1, file );
+        fwrite ( &keyWord, sizeof ( keyWord ), 1, file );
+        fclose ( file );
+        return;
+    }
+    fclose ( file );
     return;
 }//end function EncryptPassword ( USER *user )
 
@@ -541,6 +559,7 @@ void ChangePassword ( char userName[], char newPassword[] ){
     //fieldToSort: campo a ordenar el archivo users.txt
     char fieldToSort[] = "userName";
 
+    EncryptPassword(&user);
     ReadUsersFile( usersVector );
     //se cambia el usuario orignal por el nuevo que contiene la nueva contraseña
     usersVector[ userPosition ] = user;
@@ -865,12 +884,13 @@ void GetUserGraphicsVector ( char userName[], GRAPHICS userGraphicsVector[] ) {
     for ( int forIndex = indexGraphicsTotalVector - 1; forIndex != -1 && strcmp ( graphicsTotalVector[ forIndex ].userName, userName ) == 0 ; forIndex--  ){
         userGraphicsVector[ indexUserGraphicsVector ] = graphicsTotalVector[ forIndex ];
         indexUserGraphicsVector++;
-    }
+    }// end for ( int forIndex = indexGraphicsTotalVector - 1; forIndex != -1 && strcmp ( graphicsTotalVector[ forIndex ].userName, userName ) == 0 ; forIndex--  )
+
     //se busca hacia adelante de forma secuencial si hay mas graficas para agregar
     for ( int forIndex = indexGraphicsTotalVector + 1; forIndex != numberRegisters && strcmp ( graphicsTotalVector[ forIndex ].userName, userName ) == 0 ; forIndex++  ) {
         userGraphicsVector[ indexUserGraphicsVector ] = graphicsTotalVector[ forIndex ];
         indexUserGraphicsVector++;
-    }
+    }//end for ( int forIndex = indexGraphicsTotalVector + 1; forIndex != numberRegisters && strcmp ( graphicsTotalVector[ forIndex ].userName, userName ) == 0 ; forIndex++  )
     //se ordena medainte metodo de burbuja por le campo de "graphicKey" ya que al darse el graphicKey por orden de entrada de grafica, este puede ayudar a organizar por fecha
     BubbleSortGraphics ( userGraphicsVector, indexUserGraphicsVector - 1, "graphicKey" );
     return;
@@ -982,107 +1002,242 @@ int DeleteGraphic ( char userName[], char graphicKey[] ) {
 
 
 
-int stringContains(char string[], char containThis) {
-    int index = -1;
+
+
+// La función "StringContains" verificará si un string contiene un caracter en específico, para ello sus 2 parámetros (string, containThis).
+int StringContains(char string[], char containThis) {
+    int index = -1; // se define la variable "index" y se inicializa en -1 ya que si la función no contiene el caracter que se le indica, 
+                    // este es el valor que retornará como indicador, de lo contrario, retornará la posición en la cual está contenida la "x".
     for (int i = 0; i < strlen(string) && index == -1; i++) {
         if (string[i] == containThis) {
             index = i + 1;
         }
     }
+
     return index;
 }
+// fin de la función "StringContains".
 
+
+// La función "CalculateResult" calcula y retorna el resultado de un valor indicado después de evaluarlo en una función exponencial f(x) específica.
 double CalculateResult(char str[], int x) {
-    const char delim[] = "/";
-    char *token = strtok(str, delim);
-    double resultado = 0;
+    char delim[] = "/"; // se define la variable "delim" y se inicializa con un '/', ya que este será el indicador para identificar cada término de la función f(x).
+    char *token = strtok(str, delim); // se define la variable "token" con la funcionalidad de almacenar cada término a evaluar de le ecuación. 
+    double result = 0; // se define la variable "result", en esta se irá almacenando el valor del resultado total de la función (se evaluará término a término).
+
     while (token != NULL) {
-        char termino[10];
-        strcpy(termino, token);
-        int esConstante = stringContains(termino, 'x');
-        if (esConstante != -1) {
-            char exponente[20];
-            strcpy(exponente, termino + esConstante);
-            char coeficiente[20];
-            strncpy(coeficiente, termino, esConstante);
-            resultado += atoi(coeficiente) * (pow(x, atoi(exponente)));
+        char term[10]; // se define la variable "term", en esta se almacenará cada término que se extrae de la función f(x).
+        strcpy(term, token);
+        int constant = StringContains(term, 'x'); // se define la variable "constant", esta indicará si la función posee términos constantes o no.
+        if (constant != -1) {
+            char exp[20]; // se define la variable "exp", en esta se almacenará el exponente que le corresponde a la varible X en un término específico de la función f(x).
+            strcpy(exp, term + constant);
+            char coefficient[20]; // se define la variable "coefficient", en esta se almacenará el coeficiente que le coresponde a la variable X en un término específico de la función f(x).
+            strncpy(coefficient, term, constant);
+            result += atoi(coefficient) * (pow(x, atoi(exp)));
         }else{
-            resultado += atoi(termino);
+            result += atoi(term);
         }
         token = strtok(NULL, delim);
     }
     
-    return resultado;
+    return result;
 }
+// fin de la función "CalculateResult". 
 
-void insertChar(char *str, char c, int pos) {
-    int len = strlen(str);
 
-    for(int i = len; i >= pos; i--){
+// La función "InsertChar" se utiliza para insertar un caracter en una cadena, en una posición específica de la cadena.
+void InsertChar(char *str, char c, int pos) {
+    int length = strlen(str);  // se define la variable "length", esta almacenará el largo de la cadena original.
+
+    for(int i = length; i >= pos; i--){
         str[i + 1] = str[i];
     }
 
-    str[pos] = c;
-    str[len + 1] = '\0';
+    str[pos] = c; // se inserta el caracter deseado en la posición específica de la cadena.
+    str[length + 1] = '\0'; // se agrega el cierre de cadena a la cadena original después de haber insertado el caracter.
 }
+// fin de la función "InsertChar".
 
+
+// La función "SettearString" se utiliza para separar los términos de una función y los acomoda como el programador los necesita para evaluarlos
+// de una manera sencilla, la idea es dejar la función ingresada de la siguiente manera: "/+2x3/-4x2/+x/+10/".
 void SettearString(char *str , char addThisChar) {
     for (int i = 0; str[i] != '\0'; i++){
         if ( str[i + 1] == '+' || str[i + 1] == '-' ) {
             int pos = i + 1;
-            insertChar(str, addThisChar, pos);
+            InsertChar(str, addThisChar, pos);
             i++;
         }
     }
 }
+// fin de la función "SettearString".
 
-void SettearString2(char *str  ) {
+
+// La función "SettearString2" se utiliza para evaluar si cada término de la función ingresada por el usuario tiene los respectivos atributos,
+// es decir, exponente, variable, exponente, en caso de no tener exponente, se asume que es 1 y se le agrega, igualmente con el exponente.
+void SettearString2(char *str){
     for (int i = 0; str[i] != '\0'; i++) {
         if ( str[i] == 'x' && str[i + 1] == '/' ) {
             int pos = i + 1;
-            insertChar(str, '1', pos);
+            InsertChar(str, '1', pos);
             i++;
         }
 
         if ( (str[i] == '+' || str[i] == '-') && str[i + 1] == 'x' ) {
             int pos = i + 1;
-            insertChar(str, '1', pos);
+            InsertChar(str, '1', pos);
             i++;
         }
     }
 }
+// fin de la función "SettearString2".
 
 
-void arreglarInicio(char *vojabes){
-    char arreglo[40];
-    arreglo[0]='+';
+// La función "ArrangeStart" se utiliza para "arreglar" el inicio de la función que se ingrese, esto añadiendo un "+" 
+// al inicio de la cadena para luego trabajarla fácilmente. Esta recibe el string a modificar como parámetro.
+void ArrangeStart(char *str){
+    char array[40]; // se define la varible "array", esta almacenará inicialmente el "+" que se modificará en la función
+                    // original y se le irán añadiendo los demás caracteres de la misma cadena original.
+    array[0]='+';
 
-    for (int i=1; i < strlen(vojabes)+1; i++){
-        arreglo[i] = vojabes[i-1];
+    for (int i=1; i < strlen(str)+1; i++){
+        array[i] = str[i-1];
     }
 
-    vojabes[0]='\0';
-    strcpy(vojabes,arreglo);
+    str[0]='\0'; // se "vacía" la cadena original para poder almacenar el valor modificado en ella.
+    strcpy(str,array); 
 }
+// fin de la función "ArrangeStart".
 
 
-void modificarString(char *string){
-    char uno[]="1";
+// La función "ModifyString" se encarga de evaluar los cambios que necesita la función después de que el usuario la ingrese para poder ser evaluada
+// correctamente, en caso de necesitarlos, los realiza.
+void ModifyString(char *string){
+    char one[]="1"; // se define la variable "one", esta se inicializa en 1 ya que este será el exponente que le corresponde a un término X.
 
     if( string[0]=='x') {
-        arreglarInicio(string);
+        ArrangeStart(string);
     }
     if( string[strlen(string)-1]=='x') {
-        strcat(string,uno);   
+        strcat(string,one);   
     }
     SettearString(string, '/');
     SettearString2(string);
 }
+// fin de la función "ModifyString".
 
-void GraphCase1(SDL_Renderer *renderer, char function[], int x1, int y1, int x2, int y2, int increment, int divX, int xmin, int xmax, double maximum){
-    char aux[30] = "";
-    int height = WINDOW_HEIGHT - 140;
-    int height1 = WINDOW_HEIGHT - 20;
+
+// ************************************************************ CASOS DE GRAFICACIÓN (DIFERENTES CUADRANTES) ************************************************************************************
+
+/*  En esta sección encontrará 9 funciones con el nombre GraphCaseX, cada una adecuada para cada cuadrante donde el usuario quiera visualizar 
+    la función que ingresó, esto se define con el rango inferior y rango superior que el mismo usuario ingresa por teclado.
+
+    Cada una de las funciones contendrá los siguientes parámetros en común (las que no sean comunes en general, serán documentadas donde se utilicen):
+    "renderer": contiene una estructura que se verá reflejada en pantalla, básicamente la creación de la ventana.
+    "font": contiene la fuente que será utilizada a la hora de crear texto.
+    "function": contiene la función f(x) que se evaluará y se graficará.
+    "x1": contine la coordenada inicial en el eje X.
+    "y1": contine la coordenada inicial en el eje Y.
+    "x2": contine la coordenada final en el eje X.
+    "y2": contine la coordenada final en el eje Y.
+    "increment": contiene el incremento de la función en el eje X.
+    "divX": contiene la cantidad de pixeles en la que fue dividida el eje X para lograr almacenar los valores en pantalla.
+    "xmin": contiene el rango inferior que ingresó el usuario para el eje X.
+    "xmax": contiene el rango superior que ingresó el usuario para el eje X.
+    "maximum": contiene el valor absoluto del resultado máximo que se evaluó en la función en el dominio definido por el usuario.
+*/
+
+// La función "GraphCase1" se utiliza para graficar las funciones que se encuentren en el cuadrante I.
+void GraphCase1(SDL_Renderer *renderer, TTF_Font *font, char function[], int x1, int y1, int x2, int y2, int increment, int divX, int xmin, int xmax, double maximum){
+    char aux[30] = ""; // se define la variable "aux", esta almacenará la función original. 
+    int height = WINDOW_HEIGHT - 140; // se define la variable "height", esta almacenará la medida del eje Y en pixeles.
+    int height1 = WINDOW_HEIGHT - 20; // se define la variable "height1", esta almacenará la referencia para mapear los puntos que se vayan evaluando en la función.
+    strcpy(aux, function);
+
+    x1 = 20 + (xmin*divX);
+    x2 = x1 + divX; 
+    y1 = height1 - ((CalculateResult(aux, xmin)/maximum)*height);
+    strcpy(aux, function);
+    y2 = height1 - ((CalculateResult(aux, xmin+increment)/maximum)*height);
+    SDL_RenderDrawLine(renderer, x1, y1, x2, y2 );
+    
+
+    for( int i = xmin+(2*increment); i <= xmax; i = i+increment ){
+        crearTexto(renderer, font, {0, 0, 255, 255},"X", x1-5, y1-10);
+        strcpy(aux, function);
+        x1 = x2; 
+        x2 = x1 + divX;
+        y1 = y2; 
+        y2 = height1 - ((CalculateResult(aux, i)/maximum)*height);
+        SDL_RenderDrawLine(renderer, x1, y1, x2, y2 );
+        crearTexto(renderer, font, {0, 0, 255, 255},"X", x2-5, y2-10);
+    }
+}
+// fin de la función "GraphicCase1".
+
+
+// La función "GraphCase2" se utiliza para graficar las funciones que se encuentren en el cuadrante II.
+void GraphCase2(SDL_Renderer *renderer, TTF_Font *font, char function[], int x1, int y1, int x2, int y2, int increment, int divX, int xmin, int xmax, double maximum){
+    char aux[30] = ""; // se define la variable "aux", esta almacenará la función original. 
+    int height = WINDOW_HEIGHT - 140; // se define la variable "height", esta almacenará la medida del eje Y en pixeles.
+    int height1 = WINDOW_HEIGHT - 20; // se define la variable "height1", esta almacenará la referencia para mapear los puntos que se vayan evaluando en la función.
+    strcpy(aux, function);
+
+    x1 = 20;
+    x2 = x1 + divX; 
+    y1 = height1 - ((CalculateResult(aux, xmin)/maximum)*height);
+    strcpy(aux, function);
+    y2 = height1 - ((CalculateResult(aux, xmin+increment)/maximum)*height);
+    SDL_RenderDrawLine(renderer, x1, y1, x2, y2 );
+
+    for( int i = xmin+(2*increment); i <= xmax; i = i+increment ){
+        crearTexto(renderer, font, {0, 0, 255, 255},"X", x1-5, y1-10);
+        strcpy(aux, function);
+        x1 = x2; 
+        x2 = x1 + divX;
+        y1 = y2; 
+        y2 = height1 - ((CalculateResult(aux, i)/maximum)*height);
+        SDL_RenderDrawLine(renderer, x1, y1, x2, y2 );
+        crearTexto(renderer, font, {0, 0, 255, 255},"X", x2-5, y2-10);
+    }
+}
+// fin de la función "GraphicCase2".
+
+
+// La función "GraphCase3" se utiliza para graficar las funciones que se encuentren en el cuadrante III.
+void GraphCase3(SDL_Renderer *renderer, TTF_Font *font, char function[], int x1, int y1, int x2, int y2, int increment, int divX, int xmin, int xmax, double maximum){
+    char aux[30] = ""; // se define la variable "aux", esta almacenará la función original. 
+    int height = WINDOW_HEIGHT - 140; // se define la variable "height", esta almacenará la medida del eje Y en pixeles.
+    int height1 = 120; // se define la variable "height1", esta almacenará la referencia para mapear los puntos que se vayan evaluando en la función.
+    strcpy(aux, function);
+
+    x1 = 20;
+    x2 = x1 + divX; 
+    y1 = height1 - ((CalculateResult(aux, xmin)/maximum)*height);
+    strcpy(aux, function);
+    y2 = height1 - ((CalculateResult(aux, xmin+increment)/maximum)*height);
+    SDL_RenderDrawLine(renderer, x1, y1, x2, y2 );
+
+    for( int i = xmin+(2*increment); i <= xmax; i = i+increment ){
+        crearTexto(renderer, font, {0, 0, 255, 255},"X", x1-5, y1-10);
+        strcpy(aux, function);
+        x1 = x2; 
+        x2 = x1 + divX;
+        y1 = y2; 
+        y2 = height1 - ((CalculateResult(aux, i)/maximum)*height);
+        SDL_RenderDrawLine(renderer, x1, y1, x2, y2 );
+        crearTexto(renderer, font, {0, 0, 255, 255},"X", x2-5, y2-10);
+    }
+}
+// fin de la función "GraphicCase3".
+
+
+// La función "GraphCase4" se utiliza para graficar las funciones que se encuentren en el cuadrante IV.
+void GraphCase4(SDL_Renderer *renderer, TTF_Font *font, char function[], int x1, int y1, int x2, int y2, int increment, int divX, int xmin, int xmax, double maximum){
+    char aux[30] = ""; // se define la variable "aux", esta almacenará la función original. 
+    int height = WINDOW_HEIGHT - 140; // se define la variable "height", esta almacenará la medida del eje Y en pixeles.
+    int height1 = 120; // se define la variable "height1", esta almacenará la referencia para mapear los puntos que se vayan evaluando en la función.
     strcpy(aux, function);
 
     x1 = 20 + (xmin*divX);
@@ -1093,65 +1248,25 @@ void GraphCase1(SDL_Renderer *renderer, char function[], int x1, int y1, int x2,
     SDL_RenderDrawLine(renderer, x1, y1, x2, y2 );
 
     for( int i = xmin+(2*increment); i <= xmax; i = i+increment ){
+        crearTexto(renderer, font, {0, 0, 255, 255},"X", x1-5, y1-10);
         strcpy(aux, function);
         x1 = x2; 
         x2 = x1 + divX;
         y1 = y2; 
         y2 = height1 - ((CalculateResult(aux, i)/maximum)*height);
         SDL_RenderDrawLine(renderer, x1, y1, x2, y2 );
+        crearTexto(renderer, font, {0, 0, 255, 255},"X", x2-5, y2-10);
     }
 }
+// fin de la función "GraphicCase4".
 
-void GraphCase2(SDL_Renderer *renderer, char function[], int x1, int y1, int x2, int y2, int increment, int divX, int xmin, int xmax, double maximum){
-    char aux[30] = "";
-    int height = WINDOW_HEIGHT - 140;
-    int height1 = WINDOW_HEIGHT - 20;
-    strcpy(aux, function);
 
-    x1 = 20;
-    x2 = x1 + divX; 
-    y1 = height1 - ((CalculateResult(aux, xmin)/maximum)*height);
-    strcpy(aux, function);
-    y2 = height1 - ((CalculateResult(aux, xmin+increment)/maximum)*height);
-    SDL_RenderDrawLine(renderer, x1, y1, x2, y2 );
-
-    for( int i = xmin+(2*increment); i <= xmax; i = i+increment ){
-        strcpy(aux, function);
-        x1 = x2; 
-        x2 = x1 + divX;
-        y1 = y2; 
-        y2 = height1 - ((CalculateResult(aux, i)/maximum)*height);
-        SDL_RenderDrawLine(renderer, x1, y1, x2, y2 );
-    }
-}
-
-void GraphCase3(SDL_Renderer *renderer, char function[], int x1, int y1, int x2, int y2, int increment, int divX, int xmin, int xmax, double maximum){
-    char aux[30] = "";
-    int height = WINDOW_HEIGHT - 140;
-    int height1 = 120;
-    strcpy(aux, function);
-
-    x1 = 20;
-    x2 = x1 + divX; 
-    y1 = height1 - ((CalculateResult(aux, xmin)/maximum)*height);
-    strcpy(aux, function);
-    y2 = height1 - ((CalculateResult(aux, xmin+increment)/maximum)*height);
-    SDL_RenderDrawLine(renderer, x1, y1, x2, y2 );
-
-    for( int i = xmin+(2*increment); i <= xmax; i = i+increment ){
-        strcpy(aux, function);
-        x1 = x2; 
-        x2 = x1 + divX;
-        y1 = y2; 
-        y2 = height1 - ((CalculateResult(aux, i)/maximum)*height);
-        SDL_RenderDrawLine(renderer, x1, y1, x2, y2 );
-    }
-}
-
-void GraphCase4(SDL_Renderer *renderer, char function[], int x1, int y1, int x2, int y2, int increment, int divX, int xmin, int xmax, double maximum){
-    char aux[30] = "";
-    int height = WINDOW_HEIGHT - 140;
-    int height1 = 120;
+// La función "GraphCase5" se utiliza para graficar las funciones que se encuentren en los cuadrantes I y IV simultáneamente.
+// El parámetro "ymin" almacena el valor mínimo de Y que se obtiene al evaluar la función en el rango definido por el usuario.
+void GraphCase5(SDL_Renderer *renderer, TTF_Font *font, char function[], int x1, int y1, int x2, int y2, int increment, int divX, int xmin, int xmax, double maximum, double ymin){
+    char aux[30] = ""; // se define la variable "aux", esta almacenará la función original. 
+    int height = WINDOW_HEIGHT - 140; // se define la variable "height", esta almacenará la medida del eje Y en pixeles.
+    int height1 = (height+120) - abs((ymin/maximum)*height); // se define la variable "height1", esta almacenará la referencia para mapear los puntos que se vayan evaluando en la función.
     strcpy(aux, function);
 
     x1 = 20 + (xmin*divX);
@@ -1162,42 +1277,25 @@ void GraphCase4(SDL_Renderer *renderer, char function[], int x1, int y1, int x2,
     SDL_RenderDrawLine(renderer, x1, y1, x2, y2 );
 
     for( int i = xmin+(2*increment); i <= xmax; i = i+increment ){
+        crearTexto(renderer, font, {0, 0, 255, 255},"X", x1-5, y1-10);
         strcpy(aux, function);
         x1 = x2; 
         x2 = x1 + divX;
         y1 = y2; 
         y2 = height1 - ((CalculateResult(aux, i)/maximum)*height);
         SDL_RenderDrawLine(renderer, x1, y1, x2, y2 );
+        crearTexto(renderer, font, {0, 0, 255, 255},"X", x2-5, y2-10);
     }
 }
+// fin de la función "GraphicCase5".
 
-void GraphCase5(SDL_Renderer *renderer, char function[], int x1, int y1, int x2, int y2, int increment, int divX, int xmin, int xmax, double maximum, double ymin){
-    char aux[30] = "";
-    int height = WINDOW_HEIGHT - 140;
-    int height1 = (height+120) - abs((ymin/maximum)*height);
-    strcpy(aux, function);
 
-    x1 = 20 + (xmin*divX);
-    x2 = x1 + divX; 
-    y1 = height1 - ((CalculateResult(aux, xmin)/maximum)*height);
-    strcpy(aux, function);
-    y2 = height1 - ((CalculateResult(aux, xmin+increment)/maximum)*height);
-    SDL_RenderDrawLine(renderer, x1, y1, x2, y2 );
-
-    for( int i = xmin+(2*increment); i <= xmax; i = i+increment ){
-        strcpy(aux, function);
-        x1 = x2; 
-        x2 = x1 + divX;
-        y1 = y2; 
-        y2 = height1 - ((CalculateResult(aux, i)/maximum)*height);
-        SDL_RenderDrawLine(renderer, x1, y1, x2, y2 );
-    }
-}
-
-void GraphCase6(SDL_Renderer *renderer, char function[], int x1, int y1, int x2, int y2, int increment, int divX, int xmin, int xmax, double maximum, double ymin){
-    char aux[30] = "";
-    int height = WINDOW_HEIGHT - 140;
-    int height1 = (height+120) - abs((ymin/maximum)*height);
+// La función "GraphCase6" se utiliza para graficar las funciones que se encuentren en los cuadrantes II y III simultáneamente.
+// El parámetro "ymin" almacena el valor mínimo de Y que se obtiene al evaluar la función en el rango definido por el usuario.
+void GraphCase6(SDL_Renderer *renderer, TTF_Font *font, char function[], int x1, int y1, int x2, int y2, int increment, int divX, int xmin, int xmax, double maximum, double ymin){
+    char aux[30] = ""; // se define la variable "aux", esta almacenará la función original. 
+    int height = WINDOW_HEIGHT - 140; // se define la variable "height", esta almacenará la medida del eje Y en pixeles.
+    int height1 = (height+120) - abs((ymin/maximum)*height); // se define la variable "height1", esta almacenará la referencia para mapear los puntos que se vayan evaluando en la función.
     strcpy(aux, function);
 
     x1 = 20;
@@ -1208,19 +1306,24 @@ void GraphCase6(SDL_Renderer *renderer, char function[], int x1, int y1, int x2,
     SDL_RenderDrawLine(renderer, x1, y1, x2, y2 );
 
     for( int i = xmin+(2*increment); i <= xmax; i = i+increment ){
+        crearTexto(renderer, font, {0, 0, 255, 255},"X", x1-5, y1-10);
         strcpy(aux, function);
         x1 = x2; 
         x2 = x1 + divX;
         y1 = y2; 
         y2 = height1 - ((CalculateResult(aux, i)/maximum)*height);
         SDL_RenderDrawLine(renderer, x1, y1, x2, y2 );
+        crearTexto(renderer, font, {0, 0, 255, 255},"X", x2-5, y2-10);
     }
 }
+// fin de la función "GraphicCase6".
 
-void GraphCase7(SDL_Renderer *renderer, char function[], int x1, int y1, int x2, int y2, int increment, int divX, int xmin, int xmax, double maximum){
-    char aux[30] = "";
-    int height = WINDOW_HEIGHT - 140;
-    int height1 = WINDOW_HEIGHT - 20;
+
+// La función "GraphCase7" se utiliza para graficar las funciones que se encuentren en los cuadrantes III y IV simultáneamente.
+void GraphCase7(SDL_Renderer *renderer, TTF_Font *font, char function[], int x1, int y1, int x2, int y2, int increment, int divX, int xmin, int xmax, double maximum){
+    char aux[30] = ""; // se define la variable "aux", esta almacenará la función original. 
+    int height = WINDOW_HEIGHT - 140; // se define la variable "height", esta almacenará la medida del eje Y en pixeles.
+    int height1 = WINDOW_HEIGHT - 20; // se define la variable "height1", esta almacenará la referencia para mapear los puntos que se vayan evaluando en la función.
     strcpy(aux, function);
 
     x1 = 20;
@@ -1231,19 +1334,24 @@ void GraphCase7(SDL_Renderer *renderer, char function[], int x1, int y1, int x2,
     SDL_RenderDrawLine(renderer, x1, y1, x2, y2 );
 
     for( int i = xmin+(2*increment); i <= xmax; i = i+increment ){
+        crearTexto(renderer, font, {0, 0, 255, 255},"X", x1-5, y1-10);
         strcpy(aux, function);
         x1 = x2; 
         x2 = x1 + divX;
         y1 = y2; 
         y2 = height1 - ((CalculateResult(aux, i)/maximum)*height);
         SDL_RenderDrawLine(renderer, x1, y1, x2, y2 );
+        crearTexto(renderer, font, {0, 0, 255, 255},"X", x2-5, y2-10);
     }
 }
+// fin de la función "GraphicCase7".
 
-void GraphCase8(SDL_Renderer *renderer, char function[], int x1, int y1, int x2, int y2, int increment, int divX, int xmin, int xmax, double maximum){
-    char aux[30] = "";
-    int height = WINDOW_HEIGHT - 140;
-    int height1 = 120;
+
+// La función "GraphCase8" se utiliza para graficar las funciones que se encuentren en los cuadrantes I y II simultáneamente.
+void GraphCase8(SDL_Renderer *renderer, TTF_Font *font, char function[], int x1, int y1, int x2, int y2, int increment, int divX, int xmin, int xmax, double maximum){
+    char aux[30] = ""; // se define la variable "aux", esta almacenará la función original. 
+    int height = WINDOW_HEIGHT - 140; // se define la variable "height", esta almacenará la medida del eje Y en pixeles.
+    int height1 = 120; // se define la variable "height1", esta almacenará la referencia para mapear los puntos que se vayan evaluando en la función.
     strcpy(aux, function);
 
     x1 = 20;
@@ -1254,52 +1362,111 @@ void GraphCase8(SDL_Renderer *renderer, char function[], int x1, int y1, int x2,
     SDL_RenderDrawLine(renderer, x1, y1, x2, y2 );
 
     for( int i = xmin+(2*increment); i <= xmax; i = i+increment ){
+        crearTexto(renderer, font, {0, 0, 255, 255},"X", x1-5, y1-10);
         strcpy(aux, function);
         x1 = x2; 
         x2 = x1 + divX;
         y1 = y2; 
         y2 = height1 - ((CalculateResult(aux, i)/maximum)*height);
         SDL_RenderDrawLine(renderer, x1, y1, x2, y2 );
+        crearTexto(renderer, font, {0, 0, 255, 255},"X", x2-5, y2-10);
     }
 }
+// fin de la función "GraphicCase8".
 
-void GraphCase9(SDL_Renderer *renderer, char function[], int x1, int y1, int x2, int y2, int increment, int divX, int xmin, int xmax, double maximum, double ymin, double ymax){
-    char aux[30] = "";
-    int height = WINDOW_HEIGHT - 140;
-    int height1 = 120 + (height*maximum/(abs(ymin)+abs(ymax)));
-    strcpy(aux, function);
 
-    x1 = 20;
-    x2 = x1 + divX; 
-    y1 = height1 - ((CalculateResult(aux, xmin)/maximum)*(height1-120));
-    strcpy(aux, function);
-    y2 = height1 - ((CalculateResult(aux, xmin+increment)/maximum)*(height1-120));
-    SDL_RenderDrawLine(renderer, x1, y1, x2, y2 );
+// La función "GraphCase9" se utiliza para graficar las funciones que ocupen coordenadas que se distribuyan a lo largo del plano XY.
+// El parámetro "ymin" almacena el valor mínimo de Y que se obtiene al evaluar la función en el rango definido por el usuario.
+// El parámetro "ymax" almacena el valor máximo de Y que se obtiene al evaluar la función en el rango definido por el usuario.
+void GraphCase9(SDL_Renderer *renderer, TTF_Font *font, char function[], int x1, int y1, int x2, int y2, int increment, int divX, int xmin, int xmax, double maximum, double ymin, double ymax){
+    char aux[30] = ""; // se define la variable "aux", esta almacenará la función original. 
+    int height = WINDOW_HEIGHT - 140; // se define la variable "height", esta almacenará la medida del eje Y en pixeles.
+    int height1 = 0; // se define la variable "height1", esta almacenará la referencia para mapear los puntos que se vayan evaluando en la función.
 
-    for( int i = xmin+(2*increment); i <= xmax; i = i+increment ){
+    if(maximum>ymax){
+        height1 = height + 120 - (height*maximum/(abs(ymin)+abs(ymax)));
+
         strcpy(aux, function);
-        x1 = x2; 
-        x2 = x1 + divX;
-        y1 = y2; 
-        y2 = height1 - ((CalculateResult(aux, i)/maximum)*(height1-120));
+
+        x1 = 20;
+        x2 = x1 + divX; 
+        y1 = height1 - ((CalculateResult(aux, xmin)/maximum)*(height1-height1+120));
+        strcpy(aux, function);
+        y2 = height1 - ((CalculateResult(aux, xmin+increment)/maximum)*(height1-height1+120));
         SDL_RenderDrawLine(renderer, x1, y1, x2, y2 );
+
+        for( int i = xmin+(2*increment); i <= xmax; i = i+increment ){
+            crearTexto(renderer, font, {0, 0, 255, 255},"X", x1-5, y1-10);
+            strcpy(aux, function);
+            x1 = x2; 
+            x2 = x1 + divX;
+            y1 = y2; 
+            y2 = height1 - ((CalculateResult(aux, i)/maximum)*(height1-height1+120));
+            SDL_RenderDrawLine(renderer, x1, y1, x2, y2 );
+            crearTexto(renderer, font, {0, 0, 255, 255},"X", x2-5, y2-10);
+        } 
+
+    } else{
+        height1 = 120 + (height*maximum/(abs(ymin)+abs(ymax)));
+
+        strcpy(aux, function);
+
+        x1 = 20;
+        x2 = x1 + divX; 
+        y1 = height1 - ((CalculateResult(aux, xmin)/maximum)*(height1-120));
+        strcpy(aux, function);
+        y2 = height1 - ((CalculateResult(aux, xmin+increment)/maximum)*(height1-120));
+        SDL_RenderDrawLine(renderer, x1, y1, x2, y2 );
+
+        for( int i = xmin+(2*increment); i <= xmax; i = i+increment ){
+            crearTexto(renderer, font, {0, 0, 255, 255},"X", x1-5, y1-10);
+            strcpy(aux, function);
+            x1 = x2; 
+            x2 = x1 + divX;
+            y1 = y2; 
+            y2 = height1 - ((CalculateResult(aux, i)/maximum)*(height1-120));
+            SDL_RenderDrawLine(renderer, x1, y1, x2, y2 );
+            crearTexto(renderer, font, {0, 0, 255, 255},"X", x2-5, y2-10);
+        }
     }
 }
+// fin de la función "GraphicCase9".
 
-void CreateAxis(SDL_Renderer *renderer, int xmin, int xmax, double ymax, double ymin, int divX, double maximum, int increment){
-    int startX = 20; 
-    int startY = 120;
-    int endX = WINDOW_WIDTH - 20, endY = WINDOW_HEIGHT - 20;
-    int ubiX = 0, ubiY = 0;
 
+// La función "CreateAxis" se utiliza para graficar los ejes "Y" y "X" en la ventana.
+void CreateAxis(SDL_Renderer *renderer, TTF_Font *font, int xmin, int xmax, double ymax, double ymin, int divX, double maximum, int increment){
+    int startX = 20; // se define la variable "startX", en esta se almacena la coordenada inicial para el eje X.
+    int startY = 120; // se define la variable "startY", en esta se almacena la coordenada inicial para el eje Y.
+    int endX =  WINDOW_WIDTH - 20; // se define la variable "endX", en esta se almacena la coordenada final para el eje X.
+    int endY = WINDOW_HEIGHT - 20; // se define la variable "endY", en esta se almacena la coordenada final para el eje Y.
+    int ubiX = 0, ubiY = 0; // se definen variables "ubiX" y "ubiY", en estas se almacenan las coordenadas para los ejes X e Y respectivamente 
+                            // en caso de que estos se deban desplazar acorde a la gráfica de la función.
+    SDL_SetRenderDrawColor(renderer, 255,0,0,255);
     // UBICACIÓN DEL EJE Y
-    if( xmin >= 0 )  
+    if( xmin >= 0 ){
         SDL_RenderDrawLine(renderer, startX, startY, startX, endY);
-    else if( xmax <= 0 )
+
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+        for( int i = startX; i <= endX; i+=divX){
+            SDL_RenderDrawLine(renderer, i, startY, i, endY );
+        } 
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+    }
+    else if( xmax <= 0 ){
         SDL_RenderDrawLine(renderer, endX, startY, endX, endY);
+        
+        for( int i = startX; i <= endX; i+=divX){
+            SDL_RenderDrawLine(renderer, i, startY, i, endY );
+        } 
+
+    }
     else{
         ubiX = 20 + (abs(xmin)*divX)/increment; 
         SDL_RenderDrawLine(renderer, ubiX, startY, ubiX, endY);
+
+        for( int i = startX; i <= endX; i+=divX){
+            SDL_RenderDrawLine(renderer, i, startY, i, endY );
+        } 
     } 
 
     // UBICACIÓN DEL EJE X
@@ -1308,12 +1475,19 @@ void CreateAxis(SDL_Renderer *renderer, int xmin, int xmax, double ymax, double 
     else if( ymax <= 0 )
         SDL_RenderDrawLine(renderer, startX, startY, endX, startY);
     else{
-        ubiY = 120 + (500*maximum/(abs(ymin)+abs(ymax)));
+        if(maximum>ymax)
+            ubiY = endY - (500*maximum/(abs(ymin)+abs(ymax)));
+        else
+            ubiY = 120 + (500*maximum/(abs(ymin)+abs(ymax)));
+    
         SDL_RenderDrawLine(renderer, startX, ubiY, endX, ubiY);
     }
-
+    SDL_SetRenderDrawColor(renderer, 0,0,0,255);
 }
+// fin de la función "CreateAxis".
 
+
+// La función "CalculateDiv" calcula y retorna el divisor de la división necesaria para saber en cuántas secciones se debe dividir el eje X.
 int CalculateDiv(int superior, int inferior){
     if(inferior >= 0)
         return superior; 
@@ -1322,16 +1496,22 @@ int CalculateDiv(int superior, int inferior){
     else
         return abs(superior)+abs(inferior);
 }
+// fin de la función "CalculateDiv".
 
-void GraphFunction(SDL_Renderer *renderer, char function[], int lowerBound, int upperBound, int increment) {
-    int width = WINDOW_WIDTH - 40;
-    int height = WINDOW_HEIGHT - 140;
-    double ymax = 0;
-    double ymin = 0; 
-    double valueMax = 0;
-    char auxFunction[30]="";
-    int divX = (width*increment)/(CalculateDiv(upperBound, lowerBound));
-    modificarString(function);
+
+// La función "GraphFunction" se encarga de recibir los valores que ingresa el usuario y distribuirlos a través de las funciones necesarias para
+// graficar la función deseada.
+void GraphFunction(SDL_Renderer *renderer, TTF_Font *font, char function[], int lowerBound, int upperBound, int increment) {
+    int width = WINDOW_WIDTH - 40; // se define la variable "width", esta almacena el largo del eje X en pixeles.
+    int height = WINDOW_HEIGHT - 140; // se define la variable "height", esta almacena el largo del eje Y en pixeles.
+    double ymax = 0; // se define la variable "ymax", esta almacena el mayor valor positivo evaluado en la función con los respectivos rangos.
+    double ymin = 0; // se define la variable "ymin", esta almacena el menor valor positivo evaluado en la función con los respectivos rangos.
+    double valueMax = 0; // se define la variable "valueMax", esta almacena el valor absoluto mayor evaluado en la función con los respectivos rangos.
+    char auxFunction[30]=""; // se define la variable "auxFunction", esta almacenará la función original ingresada.
+    int divX = (width*increment)/(CalculateDiv(upperBound, lowerBound)); // se define la variable "divX", esta almacena el número de pixeles de cada 
+                                                                        // sección en la que se dividirá el eje X.
+    function = strcat(function, "+0");
+    ModifyString(function);
     strcpy(auxFunction, function);
 
     for (int i = lowerBound; i<= upperBound; i=i+increment ){
@@ -1351,37 +1531,38 @@ void GraphFunction(SDL_Renderer *renderer, char function[], int lowerBound, int 
 
 
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255); // Negro
-    CreateAxis(renderer, lowerBound, upperBound, ymax, ymin, divX, valueMax, increment);
+    CreateAxis(renderer, font, lowerBound, upperBound, ymax, ymin, divX, valueMax, increment);
     
-    int x1=0, x2=0, y1=0, y2=0; 
+    int x1=0, x2=0, y1=0, y2=0; // se definen las variables "x1, x2, y1, y2", estas almacenarán las coordenadas iniciales (x1, y1) y las coordenadas
+                                // finales (x2, y2) en las que se graficará la linea.
 
     if( ymin>=0 && lowerBound>=0 ) 
-        GraphCase1(renderer, function, x1, y1, x2, y2, increment, divX, lowerBound, upperBound, valueMax);
+        GraphCase1(renderer, font, function, x1, y1, x2, y2, increment, divX, lowerBound, upperBound, valueMax);
     else if( ymin>=0 && upperBound<=0 )
-        GraphCase2(renderer, function, x1, y1, x2, y2, increment, divX, lowerBound, upperBound, valueMax);
+        GraphCase2(renderer, font, function, x1, y1, x2, y2, increment, divX, lowerBound, upperBound, valueMax);
     else if( ymax<=0 && upperBound<=0 )
-        GraphCase3(renderer, function, x1, y1, x2, y2, increment, divX, lowerBound, upperBound, valueMax);
+        GraphCase3(renderer, font, function, x1, y1, x2, y2, increment, divX, lowerBound, upperBound, valueMax);
     else if( ymax<=0 && lowerBound>=0)
-        GraphCase4(renderer, function, x1, y1, x2, y2, increment, divX, lowerBound, upperBound, valueMax);
+        GraphCase4(renderer, font, function, x1, y1, x2, y2, increment, divX, lowerBound, upperBound, valueMax);
     else if( lowerBound>=0 && ymax>0 && ymin<0 )
-        GraphCase5(renderer, function, x1, y1, x2, y2, increment, divX, lowerBound, upperBound, valueMax, ymin);
+        GraphCase5(renderer, font, function, x1, y1, x2, y2, increment, divX, lowerBound, upperBound, valueMax, ymin);
     else if( upperBound<=0 && ymax>0 && ymin<0 )
-        GraphCase6(renderer, function, x1, y1, x2, y2, increment, divX, lowerBound, upperBound, valueMax, ymin);
+        GraphCase6(renderer, font, function, x1, y1, x2, y2, increment, divX, lowerBound, upperBound, valueMax, ymin);
     else if( ymin>=0 && lowerBound<0 && upperBound>0 )
-        GraphCase7(renderer, function, x1, y1, x2, y2, increment, divX, lowerBound, upperBound, valueMax);
+        GraphCase7(renderer, font, function, x1, y1, x2, y2, increment, divX, lowerBound, upperBound, valueMax);
     else if( ymax<=0 && lowerBound<0 && upperBound>0 )
-        GraphCase8(renderer, function, x1, y1, x2, y2, increment, divX, lowerBound, upperBound, valueMax);
+        GraphCase8(renderer, font, function, x1, y1, x2, y2, increment, divX, lowerBound, upperBound, valueMax);
     else if( ymax>0 && ymin<0 && lowerBound<0 && upperBound>0)
-        GraphCase9(renderer, function, x1, y1, x2, y2, increment, divX, lowerBound, upperBound, valueMax, ymin, ymax);
+        GraphCase9(renderer, font, function, x1, y1, x2, y2, increment, divX, lowerBound, upperBound, valueMax, ymin, ymax);
 
     SDL_RenderPresent(renderer);
 }
-
+// fin de la función "GraphFunction".
 
 
 
 //---------------------------------------- separar modulo
-void eliminarUltimaLetra(char *cadena) {
+void DelateLastChar(char *cadena) {
     if (cadena == NULL || *cadena == '\0') {
         // Manejo del caso donde la cadena es nula o vacía
         return;
@@ -1499,6 +1680,7 @@ void moduloCrearUsuario(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white
                                 strcpy ( newUser.userName, userName );
                                 strcpy ( newUser.password, passWord );
                                 newUser.userKey= GetUserKey();
+                                EncryptPassword ( &newUser );
                                 AddUserToFile ( newUser );
                                 flag=0;
                             }else{
@@ -1613,7 +1795,7 @@ void crearGrafico(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white, char
     }
 }
 
-    GraphFunction(renderer, ecuacionAuxilair,rangoInferior,rangoSuperior,incrementador);
+    GraphFunction(renderer, font, ecuacionAuxilair,rangoInferior,rangoSuperior,incrementador);
 while (running) {
             SDL_Event event;
             while (SDL_PollEvent(&event)) {
@@ -1663,11 +1845,15 @@ void cambiarMiContrasena(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color whit
                                 strcat(contrasenaActualOculta,"*");
                         }else if (event.key.keysym.sym == SDLK_RETURN){
                             RellenarCadena(contrasenaActual,13);
-                            int index=binarySearchUserName(nombreUsario, &tin);
-                            if ( strcmp(contrasenaActual, tin.password)==0){
+                            USER tina ,personaje ;
+                            strcpy(tina.password, contrasenaActual);
+                            EncryptPassword(&tina);
+                            binarySearchUserName(nombreUsario ,&personaje);
+                            if ( ComparePassword(personaje.password, tina)==0){
                                 strcpy(indicativo2,"Entre contraseñan nueva: ");
                                 userWriting=1;
                             }else{
+                                strcpy(warnings,"contrasena incorrecta");
                                 // devuelve al modulo anterior
                             }
                         }
@@ -1741,35 +1927,110 @@ void cambiarMiContrasena(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color whit
 void cambiarContraRoot(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white){
         char title[40]= "APLICATIVO - GRAFICADOR - UTP";
         char subTitle[60]= "Menu para usuario: root Actualizar contraseña ";
-        char indicativo[40]= "Entre nueva contraseña:";
-        char userNameLabel[40]= "Nueva contraseña:";
-        char userName[13]=" ";
-        char warnings[32]=" ";
+        char indicativo1[40]= "Entre contraseña antigua:";
+        char contrasenaAntigua[13]=" ";
+        char contrasenaNuevaLabel[40]=" ";
+        char contrasenaNueva[13]=" ";
+        char contrasenaNuevaHidden[13]=" ";
+        char contrasenaConfirmedLabel[40]=" ";
+        char contrasenaConfirmed[13]=" ";
+        char contrasenaConfirmedHidden[13]=" ";
+        char warnings[60]=" ";
+        int writingUser=0;
+        int flag=1;
+        USER taca;
 
 
-        while (running) {
+        while (flag) {
             SDL_Event event;
             while (SDL_PollEvent(&event)) {
                 if (event.type == SDL_QUIT ) {
-                    running = 0;
+                    flag = 0;
                 }else if(event.type==SDL_KEYDOWN){
 
-                    if (event.key.keysym.sym >= SDLK_a && event.key.keysym.sym <= SDLK_z){
-                        if (SDL_GetModState() & KMOD_CAPS || SDL_GetModState() & KMOD_SHIFT){
-                            strcat(userName,SDL_GetKeyName(event.key.keysym.sym));
-                        }else{
-                            char ara[20];
-                            strcpy(ara,SDL_GetKeyName(event.key.keysym.sym));
-                            toLowerCase(ara);
-                            strcat(userName,ara);
+                    if (writingUser==0){
+                        if (event.key.keysym.sym >= SDLK_a && event.key.keysym.sym <= SDLK_z){
+                            if (SDL_GetModState() & KMOD_CAPS || SDL_GetModState() & KMOD_SHIFT){
+                                strcat(contrasenaAntigua,SDL_GetKeyName(event.key.keysym.sym));
+                            }else{
+                                char ara[20];
+                                strcpy(ara,SDL_GetKeyName(event.key.keysym.sym));
+                                toLowerCase(ara);
+                                strcat(contrasenaAntigua,ara);
+                            }
+                        }else if (event.key.keysym.sym >= SDLK_0 && event.key.keysym.sym <= SDLK_9  ){
+                                strcat(contrasenaAntigua,SDL_GetKeyName(event.key.keysym.sym));
+                        }else if (event.key.keysym.sym == SDLK_RETURN){
+                                USER root;
+                                RellenarCadena(contrasenaAntigua, 13);
+                                strcpy(taca.password, contrasenaAntigua);
+                                EncryptPassword(&taca);
+                                binarySearchUserName(" root              ",&root);
+                                if ( ComparePassword(taca.password, root)==0){
+                                    strcpy(contrasenaNuevaLabel,"Entre su nueva contraseña: ");
+                                    writingUser=1;
+                                }else{
+                                    strcpy(warnings, "Contrasena incorrecta" );
+                                    crearTexto(renderer , font, white, warnings, 10,80);
+                                    SDL_RenderPresent(renderer);   
+                                    SDL_Delay(3000);
+                                    flag=0;
+                                }
+
                         }
-                    }else if (event.key.keysym.sym >= SDLK_0 && event.key.keysym.sym <= SDLK_9  ){
-                            strcat(userName,SDL_GetKeyName(event.key.keysym.sym));
-                    }else if (event.key.keysym.sym == SDLK_RETURN){
-                            USER taca;
-                            RellenarCadena(userName, 13);
-                            char tin[20]=" root              ";
-                            ChangePassword(tin, userName);
+                    }else if (writingUser==1){
+                        if (event.key.keysym.sym >= SDLK_a && event.key.keysym.sym <= SDLK_z){
+                            if (SDL_GetModState() & KMOD_CAPS || SDL_GetModState() & KMOD_SHIFT){
+                                strcat(contrasenaNueva,SDL_GetKeyName(event.key.keysym.sym));
+                                strcat(contrasenaNuevaHidden,"*");
+                            }else{
+                                char ara[20];
+                                strcpy(ara,SDL_GetKeyName(event.key.keysym.sym));
+                                toLowerCase(ara);
+                                strcat(contrasenaNueva,ara);
+                                strcat(contrasenaNuevaHidden,"*");
+                            }
+                        }else if (event.key.keysym.sym >= SDLK_0 && event.key.keysym.sym <= SDLK_9  ){
+                                strcat(contrasenaNueva,SDL_GetKeyName(event.key.keysym.sym));
+                                strcat(contrasenaNuevaHidden,"*");
+                        }else if (event.key.keysym.sym == SDLK_RETURN){
+                            writingUser=2;
+                            strcpy(contrasenaConfirmedLabel,"Confirme su contrasena:");
+                            
+                        }
+                    }else if (writingUser==2){
+                        if (event.key.keysym.sym >= SDLK_a && event.key.keysym.sym <= SDLK_z){
+                            if (SDL_GetModState() & KMOD_CAPS || SDL_GetModState() & KMOD_SHIFT){
+                                strcat(contrasenaConfirmed,SDL_GetKeyName(event.key.keysym.sym));
+                                strcat(contrasenaConfirmedHidden,"*");
+                            }else{
+                                char ara[20];
+                                strcpy(ara,SDL_GetKeyName(event.key.keysym.sym));
+                                toLowerCase(ara);
+                                strcat(contrasenaConfirmed,ara);
+                                strcat(contrasenaConfirmedHidden,"*");
+                            }
+                        }else if (event.key.keysym.sym >= SDLK_0 && event.key.keysym.sym <= SDLK_9  ){
+                                strcat(contrasenaConfirmed,SDL_GetKeyName(event.key.keysym.sym));
+                                strcat(contrasenaConfirmedHidden,"*");
+                        }else if (event.key.keysym.sym == SDLK_RETURN){
+                            if ( strcmp(contrasenaNueva,contrasenaConfirmed)==0){
+                                RellenarCadena(contrasenaNueva,13);
+                                ChangePassword(" root              ", contrasenaNueva);
+                                strcpy(warnings, contrasenaAntigua );
+                                crearTexto(renderer , font, white, warnings, 10,80);
+                                SDL_RenderPresent(renderer);   
+                                SDL_Delay(3000);
+                                flag=0;
+                            }else{
+                                    strcpy(warnings, "Contrasenas diferentes" );
+                                    crearTexto(renderer , font, white, warnings, 10,80);
+                                    SDL_RenderPresent(renderer);   
+                                    SDL_Delay(3000);
+                                    flag=0;
+                            }
+
+                        }
                     }
             
                 }
@@ -1778,9 +2039,13 @@ void cambiarContraRoot(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white)
 
             crearTexto(renderer , font, white, title, 10,10);
             crearTexto(renderer , font, white, subTitle, 15,30);
-            crearTexto(renderer , font, white, userNameLabel, 10,50);
-            crearTexto(renderer , font, white, userName, 80,50);
-            crearTexto(renderer , font, white, warnings, 10,70);
+            crearTexto(renderer , font, white, indicativo1, 10,50);
+            crearTexto(renderer , font, white, contrasenaAntigua, 180,50);
+            crearTexto(renderer , font, white, contrasenaNuevaLabel, 10,70);
+            crearTexto(renderer , font, white, contrasenaNuevaHidden, 200,70);
+            crearTexto(renderer , font, white, contrasenaConfirmedLabel, 10,90);
+            crearTexto(renderer , font, white, contrasenaConfirmedHidden, 200,90);
+            crearTexto(renderer , font, white, warnings, 10,80);
 
 
             // Actualizar pantalla
@@ -1845,7 +2110,10 @@ void cambiarContraUser(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white)
                                 strcat(passWord,SDL_GetKeyName(event.key.keysym.sym));
                                 strcat(passWordHidded,"*");
                         }else if (event.key.keysym.sym == SDLK_RETURN){
+                            USER taca;
                             RellenarCadena(passWord,13);
+                            strcpy(taca.password,passWord);
+                            EncryptPassword(&taca);
                             strcpy(warnings,passWord);
                             ChangePassword(userName,passWord);
                         }
@@ -1958,12 +2226,22 @@ void ListarAccesosDeUsarios(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color w
                     }else if (event.key.keysym.sym >= SDLK_0 && event.key.keysym.sym <= SDLK_9  ){
                             strcat(userName,SDL_GetKeyName(event.key.keysym.sym));
                     }else if (event.key.keysym.sym == SDLK_RETURN){
+                        USER tina;
                         RellenarCadena(userName,20);
-                        tin=false;
+                        int index =binarySearchUserName(userName, &tina);
+                        if (index !=-1){
+                            tin=false;
+                        }else{
+                            quit=true;
+                            tin=false;   
+                                    crearTexto(renderer , font, white, "Este usuario no existe", 10,80);
+                                    SDL_RenderPresent(renderer);   
+                                    SDL_Delay(3000);       
+                        }
                     }
             
                 }
-            SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+
             SDL_RenderClear(renderer);
 
             crearTexto(renderer , font, white, title, 10,10);
@@ -1978,51 +2256,61 @@ void ListarAccesosDeUsarios(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color w
     }
 
     int k = GetQuantityUserGraphics ( userName );
-    GRAPHICS vector[ k ];
-    GetUserGraphicsVector ( userName, vector );
 
-
-    while (!quit) {
-        SDL_Event event;
-        while (SDL_PollEvent(&event)) {
-            if (event.type == SDL_QUIT || event.key.keysym.sym == SDLK_RETURN) {
-                quit = true;
-            } else if (event.type == SDL_MOUSEWHEEL) {
-                if (event.wheel.y > 0) {
-                    // Scroll up
-                    scrollOffset -= 20;
-                    if (scrollOffset < 0) {
-                        scrollOffset = 0;
+    if (k>0){
+        GRAPHICS vector[ k ];
+        GetUserGraphicsVector ( userName, vector );
+        while (!quit ) {
+            SDL_Event event;
+            while (SDL_PollEvent(&event)) {
+                if (event.type == SDL_QUIT) {
+                    quit = true;
+                }else if (event.type==SDL_KEYDOWN){
+                    if( event.key.keysym.sym == SDLK_RETURN){
+                        quit= true;
                     }
-                } else if (event.wheel.y < 0) {
-                    // Scroll down
-                    scrollOffset += 20;
+                } else if (event.type == SDL_MOUSEWHEEL) {
+                    if (event.wheel.y > 0) {
+                        // Scroll up
+                        scrollOffset -= 20;
+                        if (scrollOffset < 0) {
+                            scrollOffset = 0;
+                        }
+                    } else if (event.wheel.y < 0) {
+                        // Scroll down
+                        scrollOffset += 20;
+                    }
                 }
             }
+
+            SDL_RenderClear(renderer);
+
+            int y = 20 - scrollOffset; // Aplicar el desplazamiento vertical
+            if (y > 0) y = 0; // Asegurar que no se desplace más allá del inicio
+            
+            crearTexto(renderer ,font,white,title, 20, y);y+=20;
+            crearTexto(renderer ,font,white,subtitle, 20, y);y+=20;
+            crearTexto(renderer ,font,white,userNameLabel, 20, y);y+=20;
+            crearTexto(renderer ,font,white,titleData, 20, y);y+=20;
+
+            // Imprimir la tabla
+            for (int i = 0; i < k; i++) {
+                char texto[80];
+                sprintf(texto, "%s    |     %s     |   %s", vector[i].date,vector[i].graphicKey, vector[i].function);
+                crearTexto(renderer ,font,white,texto, 20, y);y+=20;
+                crearTexto(renderer ,font,white,"-------------------------------------", 20, y);
+                y += 20; // Ajusta la posición horizontal para la próxima celda
+            }
+
+            SDL_RenderPresent(renderer);
         }
-
-        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-        SDL_RenderClear(renderer);
-
-        int y = 20 - scrollOffset; // Aplicar el desplazamiento vertical
-        if (y > 0) y = 0; // Asegurar que no se desplace más allá del inicio
-        
-        crearTexto(renderer ,font,white,title, 20, y);y+=20;
-        crearTexto(renderer ,font,white,subtitle, 20, y);y+=20;
-        crearTexto(renderer ,font,white,userNameLabel, 20, y);y+=20;
-        crearTexto(renderer ,font,white,titleData, 20, y);y+=20;
-
-        // Imprimir la tabla
-        for (int i = 0; i < k; i++) {
-            char texto[80];
-            sprintf(texto, "%s    |     %s     |   %s", vector[i].date,vector[i].graphicKey, vector[i].function);
-            crearTexto(renderer ,font,white,texto, 20, y);y+=20;
-            crearTexto(renderer ,font,white,"-------------------------------------", 20, y);
-            y += 20; // Ajusta la posición horizontal para la próxima celda
-        }
-
-        SDL_RenderPresent(renderer);
+    }else if (quit!=true){
+        crearTexto(renderer , font, white, "Este usuario no tiene graficas", 10,80);
+        SDL_RenderPresent(renderer);   
+        SDL_Delay(3000);
     }
+
+
 
 
 }
@@ -2033,62 +2321,76 @@ void ListarUsarios(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white){
     char title[]= "Aplicativo -- Graficador -- UTP";
     char subtitle[]= "Listadodo de accesos todos los usuarios";
     char titleData[]="Fecha             Nro grafico    Polinomio f(x)";
-
     int cantidadDeUsuarios= GetUserKey();
-    USER todoslosUsuarios[cantidadDeUsuarios];
-    ReadUsersFile(todoslosUsuarios);
 
-    while (!quit) {
-        SDL_Event event;
-        while (SDL_PollEvent(&event)) {
-            if (event.type == SDL_QUIT || event.key.keysym.sym== SDLK_RETURN) {
-                quit = true;
-            } else if (event.type == SDL_MOUSEWHEEL) {
-                if (event.wheel.y > 0) {
-                    // Scroll up
-                    scrollOffset -= 20;
-                    if (scrollOffset < 0) {
-                        scrollOffset = 0;
+    if (cantidadDeUsuarios>1){
+        USER todoslosUsuarios[cantidadDeUsuarios];
+        ReadUsersFile(todoslosUsuarios);
+        while (!quit) {
+            SDL_Event event;
+            while (SDL_PollEvent(&event)) {
+                if (event.type == SDL_QUIT ) {
+                    quit = true;
+                }else if (event.type==SDL_KEYDOWN){
+                    if( event.key.keysym.sym == SDLK_RETURN){
+                        quit= true;
                     }
-                } else if (event.wheel.y < 0) {
-                    // Scroll down
-                    scrollOffset += 20;
+                } else if (event.type == SDL_MOUSEWHEEL) {
+                    if (event.wheel.y > 0) {
+                        // Scroll up
+                        scrollOffset -= 20;
+                        if (scrollOffset < 0) {
+                            scrollOffset = 0;
+                        }
+                    } else if (event.wheel.y < 0) {
+                        // Scroll down
+                        scrollOffset += 20;
+                    }
                 }
             }
+
+            SDL_RenderClear(renderer);
+
+            int y = 20 - scrollOffset; // Aplicar el desplazamiento vertical
+            if (y > 0) y = 0; // Asegurar que no se desplace más allá del inicio
+            
+            crearTexto(renderer ,font,white,title, 20, y);y+=20;
+            crearTexto(renderer ,font,white,subtitle, 20, y);y+=20;
+
+            // Imprimir la tabla
+            for (int i = 0; i < cantidadDeUsuarios; i++) {
+                char texto[80]; strcpy(texto,todoslosUsuarios[i].userName);
+                if ( texto[0]==' ' && strcmp(texto," root              ")!=0  ){
+                    int k = GetQuantityUserGraphics ( texto );
+                    if ( k>0){
+                        GRAPHICS vector[ k ];
+                        char userNameLabel[40]="Username:";strcat(userNameLabel,texto);
+                        GetUserGraphicsVector ( texto, vector );
+                        crearTexto(renderer ,font,white, userNameLabel, 20, y);y+=20;
+                        crearTexto(renderer ,font,white,titleData, 20, y);y+=20;
+                        for (int i = 0; i < k; i++) {
+                            char movistar[80];
+                            sprintf(movistar, "%s    |     %s     |   %s", vector[i].date,vector[i].graphicKey, vector[i].function);
+                            crearTexto(renderer ,font,white,movistar, 20, y);
+                            y += 20; // Ajusta la posición horizontal para la próxima celda
+                        }
+                        crearTexto(renderer ,font,white,"-------------------------------------------------", 20, y);
+                        y += 20; // Ajusta la posición horizontal para la próxima celda
+                    }
+                }
+            }
+            crearTexto(renderer , font, white, "ESTA ES TODA LA LISTA, SI NO VE NADA ES PORQUE NO SE HAN CREADO GRAFICAS", 10,y);
+
+            SDL_RenderPresent(renderer);
         }
 
-        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+    }else{
         SDL_RenderClear(renderer);
+        crearTexto(renderer , font, white, "Aun no hay usarios creados", 10,80);
+        SDL_RenderPresent(renderer);   
+        SDL_Delay(3000);
+    }   
 
-        int y = 20 - scrollOffset; // Aplicar el desplazamiento vertical
-        if (y > 0) y = 0; // Asegurar que no se desplace más allá del inicio
-        
-        crearTexto(renderer ,font,white,title, 20, y);y+=20;
-        crearTexto(renderer ,font,white,subtitle, 20, y);y+=20;
-
-        // Imprimir la tabla
-        for (int i = 0; i < cantidadDeUsuarios; i++) {
-            char texto[80]; strcpy(texto,todoslosUsuarios[i].userName);
-            if ( texto[0]==' ' && strcmp(texto," root              ")!=0  ){
-                int k = GetQuantityUserGraphics ( texto );
-                GRAPHICS vector[ k ];
-                char userNameLabel[40]="Username:";strcat(userNameLabel,texto);
-                GetUserGraphicsVector ( texto, vector );
-                crearTexto(renderer ,font,white, userNameLabel, 20, y);y+=20;
-                crearTexto(renderer ,font,white,titleData, 20, y);y+=20;
-                for (int i = 0; i < k; i++) {
-                    char movistar[80];
-                    sprintf(movistar, "%s    |     %s     |   %s", vector[i].date,vector[i].graphicKey, vector[i].function);
-                    crearTexto(renderer ,font,white,movistar, 20, y);
-                    y += 20; // Ajusta la posición horizontal para la próxima celda
-                }
-                crearTexto(renderer ,font,white,"-------------------------------------------------", 20, y);
-                y += 20; // Ajusta la posición horizontal para la próxima celda
-            }
-        }
-
-        SDL_RenderPresent(renderer);
-    }
 
 
 }
@@ -2167,7 +2469,7 @@ if ( strcmp(funcionAGraficar.userName, name)==0 || strcmp(" root              ",
     crearTexto(renderer , font, white, "Incremento:", 350,105);
     char incremento[5];sprintf(incremento,"%i",funcionAGraficar.increment);
     crearTexto(renderer , font, white, incremento, 430,105);
-    GraphFunction(renderer, funcionAGraficar.function,funcionAGraficar.lowerBound,funcionAGraficar.upperBound,funcionAGraficar.increment);
+    GraphFunction(renderer, font, funcionAGraficar.function,funcionAGraficar.lowerBound,funcionAGraficar.upperBound,funcionAGraficar.increment);
 while (running) {
             SDL_Event event;
             while (SDL_PollEvent(&event)) {
@@ -2187,54 +2489,128 @@ void MisGraficas(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white, char 
     char title[]= "Aplicativo -- Graficador -- UTP";
     char subtitle[70]= "Listados de graficos creados por el usuario (tu):";strcat(subtitle,name);
     char titleData[]="Fecha             Nro grafico    Polinomio f(x)";
+    char warnings[40]=" ";
 
     int k = GetQuantityUserGraphics ( name );
-    GRAPHICS vector[ k ];
-    GetUserGraphicsVector ( name, vector );
+    if ( k !=-1){
+        GRAPHICS vector[ k ];
+        GetUserGraphicsVector ( name, vector );
 
 
-    while (!quit) {
-        SDL_Event event;
-        while (SDL_PollEvent(&event) ) {
-            if (event.type == SDL_QUIT || event.key.keysym.sym == SDLK_RETURN) {
-                quit = true;
-            } else if (event.type == SDL_MOUSEWHEEL) {
-                if (event.wheel.y > 0) {
-                    // Scroll up
-                    scrollOffset -= 20;
-                    if (scrollOffset < 0) {
-                        scrollOffset = 0;
+        while (!quit) {
+            SDL_Event event;
+            while (SDL_PollEvent(&event) ) {
+                if (event.type == SDL_QUIT || event.key.keysym.sym == SDLK_RETURN) {
+                    quit = true;
+                } else if (event.type == SDL_MOUSEWHEEL) {
+                    if (event.wheel.y > 0) {
+                        // Scroll up
+                        scrollOffset -= 20;
+                        if (scrollOffset < 0) {
+                            scrollOffset = 0;
+                        }
+                    } else if (event.wheel.y < 0) {
+                        // Scroll down
+                        scrollOffset += 20;
                     }
-                } else if (event.wheel.y < 0) {
-                    // Scroll down
-                    scrollOffset += 20;
                 }
             }
+
+            SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+            SDL_RenderClear(renderer);
+
+            int y = 20 - scrollOffset; // Aplicar el desplazamiento vertical
+            if (y > 0) y = 0; // Asegurar que no se desplace más allá del inicio
+            
+            crearTexto(renderer ,font,white,title, 20, y);y+=20;
+            crearTexto(renderer ,font,white,subtitle, 20, y);y+=20;
+            crearTexto(renderer ,font,white,titleData, 20, y);y+=20;
+            crearTexto(renderer ,font,white,warnings, 20, y);y+=20;
+            
+            if ( k ==-1 ){
+                strcpy(warnings, "Este usuario aun no ha creado graficas");
+            }else{
+                for (int i = 0; i < k; i++) {
+                    char texto[80];
+                    sprintf(texto, "%s    |     %s     |   %s", vector[i].date,vector[i].graphicKey, vector[i].function);
+                    crearTexto(renderer ,font,white,texto, 20, y);y+=20;
+                    crearTexto(renderer ,font,white,"-------------------------------------", 20, y);
+                    y += 20; // Ajusta la posición horizontal para la próxima celda
+                }
+            }
+
+            // Imprimir la tabla
+            
+
+            SDL_RenderPresent(renderer);
         }
 
-        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-        SDL_RenderClear(renderer);
+    }else{
+        while (!quit) {
+            SDL_Event event;
+            while (SDL_PollEvent(&event) ) {
+                if (event.type == SDL_QUIT || event.key.keysym.sym == SDLK_RETURN) {
+                    quit = true;
+                }
+            }  
+            SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+            SDL_RenderClear(renderer);
 
-        int y = 20 - scrollOffset; // Aplicar el desplazamiento vertical
-        if (y > 0) y = 0; // Asegurar que no se desplace más allá del inicio
-        
-        crearTexto(renderer ,font,white,title, 20, y);y+=20;
-        crearTexto(renderer ,font,white,subtitle, 20, y);y+=20;
-        crearTexto(renderer ,font,white,titleData, 20, y);y+=20;
+            // Imprimir la tabla
+            crearTexto(renderer ,font,white,"AUN NO TIENES GRAFICAS", 20, 20);
 
-        // Imprimir la tabla
-        for (int i = 0; i < k; i++) {
-            char texto[80];
-            sprintf(texto, "%s    |     %s     |   %s", vector[i].date,vector[i].graphicKey, vector[i].function);
-            crearTexto(renderer ,font,white,texto, 20, y);y+=20;
-            crearTexto(renderer ,font,white,"-------------------------------------", 20, y);
-            y += 20; // Ajusta la posición horizontal para la próxima celda
+            SDL_RenderPresent(renderer);
         }
-
-        SDL_RenderPresent(renderer);
     }
+}
 
 
+void borrarGrafica(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white, char name[]){
+        char title[40]= "APLICATIVO - GRAFICADOR - UTP";
+        char subTitle[60]= "Menu borrar grafico para usuario:";strcat(subTitle,name);
+        char indicativo[40]= "Entre nroGrafica:";
+        char nroGrafica[20]=" ";
+        char warnings[40]=" ";
+        int flag=1;
+
+        while (flag) {
+            SDL_Event event;
+            while (SDL_PollEvent(&event)) {
+                if (event.type == SDL_QUIT ) {
+                    flag = 0;
+                }else if(event.type==SDL_KEYDOWN){
+
+                    if (event.key.keysym.sym >= SDLK_0 && event.key.keysym.sym <= SDLK_9  ){
+                            strcat(nroGrafica,SDL_GetKeyName(event.key.keysym.sym));
+                    }else if (event.key.keysym.sym == SDLK_BACKSPACE){
+                        DelateLastChar(nroGrafica);
+                    }else if (event.key.keysym.sym == SDLK_RETURN){
+                        char nroRefencia[5]; sprintf(nroRefencia, "%04d", atoi(nroGrafica));
+                        int status = DeleteGraphic(name,nroRefencia);
+                        if (status == -2){
+                            strcpy(warnings,"La grafica que deseas borrar no existe");
+                        }else if ( status == -1){
+                            strcpy(warnings , "Este grafico no te pertenece");
+                        }else{
+                            strcpy(warnings, "Se ha borrado el grafico con exito");
+                        }
+                    }
+            
+                }
+            SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+            SDL_RenderClear(renderer);
+
+            crearTexto(renderer , font, white, title, 10,10);
+            crearTexto(renderer , font, white, indicativo, 15,50);
+            crearTexto(renderer , font, white, nroGrafica, 130,50);
+            crearTexto(renderer , font, white, subTitle, 15,30);
+            crearTexto(renderer , font, white, warnings, 10,70);
+
+
+            // Actualizar pantalla
+            SDL_RenderPresent(renderer);
+        }   
+    }
 }
 
 void modulo2User(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white, char nombreUsario[]) {
@@ -2260,7 +2636,7 @@ void modulo2User(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white, char 
                         crearGrafico(renderer, font, white,nombreUsario);
                         break;
                     case SDLK_2:
-                        crearGrafico(renderer, font, white,nombreUsario); //borrar grafica
+                        borrarGrafica(renderer, font, white,nombreUsario); //borrar grafica
                         break;
                     case SDLK_3:
                         MisGraficas(renderer, font, white,nombreUsario);
@@ -2291,7 +2667,8 @@ void modulo2User(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white, char 
 }
 }
 
-void modulo2Root(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white) {
+//
+void RootModule(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white) {
     char title[40]= "APLICATIVO - GRAFICADOR - UTP";
     char subTitle[40]= "Menu principal para usuario: root";
     char option0[40]= "0. Salir del aplicativo";
@@ -2303,7 +2680,7 @@ void modulo2Root(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white) {
     char option6[40]= "6. Cambiar password del usuario: root";
     char option7[40]= "7. cambiar password de un usuario";
 
-    int flag=1;
+    int flag=1; 
     while (flag) {
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
@@ -2362,10 +2739,10 @@ void modulo2Root(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white) {
 
 
 // recibe pantalla donde se renderizara , fuente con la que se hara y color del texto
-void modulo1(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white){
+void LogIn(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white){ // Este mudulo es el prin
     // Para este programa se ha decidido que los string se inicializaran con " "
     char userName[20] = " ";  // Es el el string que guarda el nombre de usuario que se entre
-    char passHidded[40]=" "; // Es la contraseña enmascarada  (ejemplo: ****)
+    char passHidded[30]=" "; // Es la contraseña enmascarada  (ejemplo: ****)
     char passWord[13]=" ";  // Es la contraseña sin enmascarar (ejemplo: hola)
     int  writingUser=0;    // Esta varible permite identificar que campo se esta escribiendo siendo { 0 = userName , 1 = password }
     char warnings[70]="AQUI PONDRE LA CONRASEÑA QUE DEBE PONER:"; // Variable para poner advertencias o indicativos que se le deban dar al usuario
@@ -2374,112 +2751,123 @@ void modulo1(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white){
     int exitApp=0; //necesita habilitar para que cuando se presione cualquier tecla se finalice el programa
     int exitAppAuxiliar=0; // Es la variable encargada de habilitar exitApp a 1 (podria ser cualquier numero mayor a 0)
     char warnings2[70]="AQUI PONDRE LA CONTRASEÑA QUE EL USARIO INGRESA: ";
-    char usuarioparamodulo2[20]=" ";
-    int vecesIntentadas=0;
+    char usuarioparamodulo2[20]=" "; // Esta variable sera enviada solo para UserModule , sirve de auxiliar para enviar el nombre del usuario que se ha loggueado
+    int vecesIntentadas=0; // lleva el contador de las veces que se introduce una contraseña incorrectamente
 
     //while (running) mantiene actualizando el modulo actual , esto para que el usuario pueda ver lo que va escribiendo 
     while (running && vecesIntentadas!=3) {
 
         SDL_Event event; // event es una variable tipo evento , estas variables guardan lo que ha sucedido en el aplicativo
         // while (SDL_PollEvent(&event)) , ira mirando cada uno de los eventos que esten guardados en event
-        while (SDL_PollEvent(&event)) { 
+        while (SDL_PollEvent(&event)) {  //lee todos los eventos que han ocurrido
             if (event.type == SDL_QUIT || exitApp) { // si se debe finalizar el programa
                 running = 0;
             }
-
-
 //--------------------------------- Code Optimizado ----------------------------------------------------------
-            if(event.type==SDL_KEYDOWN){
+            if(event.type==SDL_KEYDOWN){ // lee solo cuando la tecla fue presionada , no si se esta presionando
 
-           if(exitAppAuxiliar==1){
-                exitApp=1;
-           }else if (writingUser==0){ // userName
+                if(exitAppAuxiliar==1){
+                    exitApp=1;
+                }else if (writingUser==0){ // userName
 
-                if (event.key.keysym.sym >= SDLK_a && event.key.keysym.sym <= SDLK_z){
-                    if (SDL_GetModState() & KMOD_CAPS || SDL_GetModState() & KMOD_SHIFT){
-                        strcat(userName,SDL_GetKeyName(event.key.keysym.sym));
-                    }else{
-                        char ara[20];
-                        strcpy(ara,SDL_GetKeyName(event.key.keysym.sym));
-                        toLowerCase(ara);
-                        strcat(userName,ara);
-                    }
-                }else if (event.key.keysym.sym >= SDLK_0 && event.key.keysym.sym <= SDLK_9  ){
-                        strcat(userName,SDL_GetKeyName(event.key.keysym.sym));
-                }else if (event.key.keysym.sym == SDLK_RETURN){
-                    if (GetUserKey() == 0){
-                        if ( strcmp(userName , " root")==0){
-                            strcpy(passHidded, "Password: ");
-                            strcpy(warnings, " ");
-                            writingUser= 1;                
+                    if (event.key.keysym.sym >= SDLK_a && event.key.keysym.sym <= SDLK_z){  // si se ha presionado  una tecla del abecedadario
+                        if (SDL_GetModState() & KMOD_CAPS || SDL_GetModState() & KMOD_SHIFT){ // si hay un modificador que la haga mayuscula (esten las mayusculas activadas)
+                            strcat(userName,SDL_GetKeyName(event.key.keysym.sym)); // Concatenamos la tecla que se quiere agregar a userName
                         }else{
-                            strcpy(warnings,"USUARIO INCORRECTO");
-                            strcpy(userName, " ");
-                            exitAppAuxiliar=1;
+                            char charLikeString[2]; // cadena auxiliar a la ..................
+                            strcpy(charLikeString,SDL_GetKeyName(event.key.keysym.sym));// que añadimos el caracter q hemos presionado (para poder trabajarlos como string)
+                            toLowerCase(charLikeString); //Esta funcion nos convierte a minusculas un string q contenga mayusculas
+                            strcat(userName,charLikeString); // concatenamos la tecla que se quiere agragar a userName
                         }
-                    }else{
-                        USER bellavista;
-                        RellenarCadena(userName,20);            
-                        int index = binarySearchUserName(userName,&bellavista);
-                        if ( index ==-1){
-                            strcpy(warnings, "USUARIO NO EXISTENTE");
-                            sprintf(warnings2, "%i", index);
-                        }else{
-                            strcpy(passHidded, "Password: ");
-                            strcpy(warnings,  bellavista.password);
-                            writingUser= 1;    
+                    }else if (event.key.keysym.sym >= SDLK_0 && event.key.keysym.sym <= SDLK_9  ){ // si he presioando un numero
+                            strcat(userName,SDL_GetKeyName(event.key.keysym.sym)); // lo agramaos a userName
+                    }else if (event.key.keysym.sym == SDLK_BACKSPACE){ // si se ha presionado la tecla de borrar
+                            DelateLastChar(userName);
+                    }else if (event.key.keysym.sym == SDLK_RETURN){ // cuando el usuario presione enter
+                        if (GetUserKey() == 0){ // esto indica qu es la primera vez que se ejecuta el programa, por ende se tratará de manera distinta
+                            if ( strcmp(userName , " root")==0){ // la primera vez si o si se debe creear el usuario root , aqui verificamos eso
+                                strcpy(passHidded, "Password: "); // habilitamos el campo para Password
+                                strcpy(warnings, " "); // y limpiamos advertencias de haberlas
+                                writingUser= 1; // ajustamos writingUSer a uno (lo que signigica que ahora se escribira la contraseña)
+                            }else{ // si la primera vez no ha añadido el usuario root
+                                strcpy(warnings,"USUARIO INCORRECTO"); // notificamos que el usuario que se queire ingresar no es el adecuado
+                                strcpy(userName, " "); // limpiamos el username que el usuario ha ingresado para que no se vea en pantalla ya
+                                exitAppAuxiliar=1; // y habilitamos que para la proxima vez que se presione una tecla se cierre el aplicativo
+                            }
+                        }else{ // de lo contrario el usuario root ya existe , es decir no es la primera vez iniciado el programa
+                            USER userFound; // guardará el usuario al que el usuario actual quiere acceder
+                            RellenarCadena(userName,20);        
+                            int index = binarySearchUserName(userName,&userFound); 
+                            if ( index ==-1){ // si el usuario no existe
+                                strcpy(warnings, "USUARIO NO EXISTENTE");
+                                sprintf(warnings2, "%i", index);
+                            }else{ // si el usuario existe entonces
+                                strcpy(passHidded, "Password: "); // habiliamos el campo para la contraseña
+                                strcpy(warnings,  userFound.password); // ignorar esto 
+                                writingUser= 1;  // habilitamos al usario para que escriba ahora la contraseña
+                            }
                         }
                     }
-                }
 
 
-            }else if (writingUser==1 ){ // contraseña
+                }else if (writingUser==1 ){ // contraseña
                     if (event.key.keysym.sym >= SDLK_a && event.key.keysym.sym <= SDLK_z){
                         strcat(passHidded,"*");
                         if (SDL_GetModState() & KMOD_CAPS || SDL_GetModState() & KMOD_SHIFT){
                             strcat(passWord,SDL_GetKeyName(event.key.keysym.sym));
                         }else {
-                            char ara[12];
-                            strcpy(ara,SDL_GetKeyName(event.key.keysym.sym));
-                            toLowerCase(ara);
-                            strcat(passWord,ara);
+                            char charLikeString[12];
+                            strcpy(charLikeString,SDL_GetKeyName(event.key.keysym.sym));
+                            toLowerCase(charLikeString);
+                            strcat(passWord,charLikeString);
                         }
                     }else if (event.key.keysym.sym >= SDLK_0 && event.key.keysym.sym <= SDLK_9  ){
                         strcat(passHidded,"*");
                         strcat(passWord,SDL_GetKeyName(event.key.keysym.sym));
+                    }else if (event.key.keysym.sym == SDLK_BACKSPACE){
+                        DelateLastChar(passWord);
+                        DelateLastChar(passHidded);
                     }else if (event.key.keysym.sym == SDLK_RETURN ){
-                        if ( GetUserKey()==0){
-                            if (strlen(passWord) >=5){
-                                USER root;
+                        if ( GetUserKey()==0){ // si es la primera vez que se ejecuta el programa debemos verificar que la contraseña sea mayos de 4 caracteres
+                            if (strlen(passWord) >=5){ // aqui hacemos esa verificacion
+                                USER root; // creamos el usuario que agregaremos a la base 
                                 RellenarCadena(userName,20);
                                 RellenarCadena(passWord,13);
                                 strcpy ( root.userName, userName );
                                 strcpy ( root.password, passWord );
-                                root.userKey = 0; AddUserToFile ( root );
-                                running=0;
-                            }else{
-                                strcpy(passWord," ");
+                                // le asignos a root el userkey 0 (es el primero) | encriptamos su contraseña | lo añadimos a la base
+                                root.userKey = 0; EncryptPassword( &root ); AddUserToFile ( root );
+                                RootModule(renderer,font,white); // se ha creado correctamente el usario, por ende lo mandamos a la pantalla de rood
+                            }else{// si el usuario ha entrado correctamente el userName (la primera vez debe ser root) pero no ingresa una contraseña adecuada
+                                strcpy(passWord," "); // borramos todo lo ya hecho
                                 strcpy(passHidded," ");
-                                strcpy(userName," ");
-                                vecesIntentadas++;
-                                writingUser=0;
+                                strcpy(userName," ");//--------
+                                vecesIntentadas++; // aumentamos las veces intentadas a 1 
+                                writingUser=0; // y le decimos que vuelva a ingresar datos desde userName
                             }
-                        }else {
-                            USER bellavista;
+                        }else { // si no es la primera vez iniciando el aplicativo
+                            USER userFound; // creamos el USER que guarda el usuario al que se quiere acceder 
                             RellenarCadena(userName,20);
                             RellenarCadena(passWord,13);
-                            int index = binarySearchUserName(userName,&bellavista);
-                            if ( index ==-1){
+                            int index = binarySearchUserName(userName,&userFound);
+                            if ( index ==-1){ // si el no usuario existe
                                 strcpy(warnings, "USUARIO NO EXISTENTE");
-                            }else{
+                            }else{ 
                                 strcpy(passHidded, "Password: ");
                                 strcpy(warnings2,  passWord);
-                                if ( strcmp(passWord, bellavista.password)==0){
+                                //BORRAAAAR----------------NO SE SI DEBA CAMBIAR OTRO LUGAR DE LA CONTRASEÑA, YO SOLO HICE ESTE CAMBIO EN LO DE LOS MODULOS--------------------
+                                //Ya que la funcion EncryptPassword solicita es una estructura, creo esta para enmascarar la contra 
+                                USER structToEncryptPassword;
+                                //almaceno la contraseña en la nueva estructura
+                                strcpy ( structToEncryptPassword.password, passWord );
+                                //encripto la contraseña
+                                EncryptPassword ( &structToEncryptPassword );
+                                if ( ComparePassword( structToEncryptPassword.password, userFound) ==0){
                                     strcpy(usuarioparamodulo2,userName);                                
                                     if ( strcmp (" root              ", userName)==0){
                                         strcpy(userName," ");
                                         strcpy(passWord," ");
-                                        modulo2Root(renderer, font, white);
+                                        RootModule(renderer, font, white);
                                         writingUser=0;
                                         
                                     }else{
@@ -2501,7 +2889,6 @@ void modulo1(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white){
         }
     }
         // Limpiar pantalla
-        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
         SDL_RenderClear(renderer);
         
         crearTexto(renderer , font, white, userName, 80,50); //renderiza el texto que contiene lo que el usuario vaya ingresando
@@ -2516,46 +2903,48 @@ void modulo1(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white){
     }
 }
 
-void InitGraphics(SDL_Window **window, SDL_Renderer **renderer, TTF_Font **font) {
-    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+void InitGraphics(SDL_Window **window, SDL_Renderer **renderer, TTF_Font **font) { // funcion para inicializar las graficas 
+    if (SDL_Init(SDL_INIT_VIDEO) < 0) {  // inicia todo lo relacionado con la visualización de gráficos en la pantalla,creación de ventanas,eventos de ventana,color y la renderización de gráficos.
         SDL_Log("SDL no pudo inicializarse! SDL_Error: %s\n", SDL_GetError());
     }
 
-    if (TTF_Init() == -1) {
+    if (TTF_Init() == -1) { // inicializa TTF para manejar texto
         SDL_Log("SDL_ttf no pudo inicializarse! SDL_ttf Error: %s\n", TTF_GetError());
     }
-
+    //                                        |Donde se creara la ventana en la pantalla      | El tamaño de la ventana    | le decimos que se muestre cuando se cree|
     *window = SDL_CreateWindow("GRAFICADORA", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_SHOWN);
     if (*window == NULL) {
         SDL_Log("La ventana no pudo ser creada! SDL_Error: %s\n", SDL_GetError());
     }
 
-    *renderer = SDL_CreateRenderer(*window, -1, SDL_RENDERER_ACCELERATED);
+    // crea el renderizador , window es la ventana que hemos creado y siguiente parametro es el controlador que se le debe asignar, al ser -1 le decimos a SDL que elija
+    *renderer = SDL_CreateRenderer(*window, -1, SDL_RENDERER_ACCELERATED);  //el ultimo parametro le decimos que si hay un GPU dispobible la utilice para optimizacion
     if (*renderer == NULL) {
         SDL_Log("El renderer no pudo ser creado! SDL_Error: %s\n", SDL_GetError());
     }
 
-    *font = TTF_OpenFont("c:\\Windows\\Fonts\\ARIAL.TTF", 14);
+    // Abre y deja disponible el uso de una fuente IMPORTANTE: tener la fuente instalada en el pc y con la misma ruta
+    *font = TTF_OpenFont("c:\\Windows\\Fonts\\ARIAL.TTF", 14); // ubicacion de la fuente , tamaño de esta
     if (*font == NULL) {
         SDL_Log("No se pudo cargar la fuente! SDL_ttf Error: %s\n", TTF_GetError());
     }
 }
 
-void closeGraphics(SDL_Window *window, SDL_Renderer *renderer, TTF_Font *font) {
-    TTF_CloseFont(font);
-    TTF_Quit();
-    SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(window);
-    SDL_Quit();
+void closeGraphics(SDL_Window *window, SDL_Renderer *renderer, TTF_Font *font) { // funcion para cerrar las librias graficas y terminar el aplicativo
+    TTF_CloseFont(font); // Terminamos el uso de la fuente
+    TTF_Quit(); //Terminamos el uso de la libreria TTF que nos permite el manejo de texto en la pantalla
+    SDL_DestroyRenderer(renderer); // destruimos el renderes de la ventana 
+    SDL_DestroyWindow(window); // destruimos la ventana
+    SDL_Quit(); // Terminamos el uso de SDL
 }
 
 int main(int argc, char* argv[]) {
-    SDL_Window* window = NULL;
-    SDL_Renderer* renderer = NULL;
+    SDL_Window* window = NULL; // se crea una ventana (lienzo) donde vamos a poner nuestro contenido
+    SDL_Renderer* renderer = NULL; // se crea el espacio que se quiere renderizar , render es lo que nos permite dibujar en el lienzo (window)
     TTF_Font* font = NULL; // TTF_Font es una variable para guarda la fuente que se utilizara y su tamaño
     SDL_Color white = {0, 0, 0, 255}; 
     InitGraphics(&window, &renderer, &font); //llamamos la funcion InitGraphics para que esta le de valores a nuestras variables
-    modulo1(renderer, font, white); // Se inicia el programa como tal con el modulo 1;
+    LogIn(renderer, font, white); // Se inicia el programa como tal con el modulo 1;
     closeGraphics(window, renderer, font); // cerramos las librerias visuales y todo lo relacionado con los graficos
     return 0;
 }
