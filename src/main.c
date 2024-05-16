@@ -2888,6 +2888,7 @@ void LogIn(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white){ // Este mu
             }
         }
     }
+        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
         // Limpiar pantalla
         SDL_RenderClear(renderer);
         
@@ -2943,6 +2944,7 @@ int main(int argc, char* argv[]) {
     SDL_Renderer* renderer = NULL; // se crea el espacio que se quiere renderizar , render es lo que nos permite dibujar en el lienzo (window)
     TTF_Font* font = NULL; // TTF_Font es una variable para guarda la fuente que se utilizara y su tamaño
     SDL_Color white = {0, 0, 0, 255}; 
+    
     InitGraphics(&window, &renderer, &font); //llamamos la funcion InitGraphics para que esta le de valores a nuestras variables
     LogIn(renderer, font, white); // Se inicia el programa como tal con el modulo 1;
     closeGraphics(window, renderer, font); // cerramos las librerias visuales y todo lo relacionado con los graficos
