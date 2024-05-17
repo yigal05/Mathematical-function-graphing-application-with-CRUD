@@ -1,3 +1,17 @@
+/*
+- Autores. Ing(c) Santiago Ramirez Giraldo, Kenneth Santiago Rodriguez Ramirez & Yigal Fabricio Rojas Acevedo
+- date de versión: 17/05/2024
+- Versión del código: 
+- Nombre del compilador utilizado: gcc
+- Versión del compilador: 8.1.0
+- Presentado a: Doctor Ricardo Moreno Laverde
+- Universidad Tecnológica de Pereira
+- Programa de Ingeniería de Sistemas y Computación
+- Un descriptivo de que hace el programa: permite acceso con un modulo de usuarios con “username” y “password” para cada usuario, registrando el “log” de acceso a todos los usuarios y luego permite manejar
+un modulo que permite graficar una función polinómica del tipo f(x).
+- Salvedades: 
+*/
+
 #include <SDL.h> //Libreria que nos permite manejar graficos como ventanas
 #include <SDL_ttf.h> // Libreria que nos permite manejar texto que queramos mostrar en pantalla
 #include <stdio.h>   // Libreria estandar para input y outpunt de c
@@ -6,11 +20,10 @@
 #include <time.h> // libreria que nos permite acceder al tiempo de la maquina donde se ejecuta el programa
 #include <string.h> // Libreria que nos expande el uso y las posibilidades de manipulacion para cadenas de Chars
 #include <ctype.h> // Libreria para cadenas en este codigo usada la funcion toLower
+#include <stdbool.h>// Libreria para usar expresiones como true y false
 
 #define WINDOW_WIDTH 790 // Definimos el ancho de la ventana
 #define WINDOW_HEIGHT 640 // Definimos la altura de la ventana
-
-int running = 1;
 
 #pragma pack(push, 1) // Guardar el estado actual de alineación y establecer la alineación en 1 byte
 
@@ -35,20 +48,16 @@ typedef struct {
 
 //prototipado de las funciones
 int CompareUsers( USER *struct0, USER *struct1, char *field );
-void MergeUsers ( USER originalStruct[], int start, int half, int end, char *field );
-void MergeSortUsers ( USER originalStruct[], int start, int end, char *field );
 void ReadUsersFile( USER vector[] );
 void WriteUsersFile( USER vector[], int numberRegisters );
 void OrganizeUsersFile ();
 int binarySearchUserName ( char userNameToSearch[], USER* result );
 int GetUserKey ( );
 void AddUserToFile( USER user );
-void CreateNewUser ();
 void EncryptPasswordWordKey( USER *userToEncryptPassword, char keyWord[] );
 void EncryptPasswordDisplacement( USER *userToEncryptPassword, int displacement );
 void EncryptPassword ( USER *user );
 int ComparePassword ( char passwordEntered[], USER originalUser );
-void LoginUser ();
 int DeleteUser ( char userName[] );
 void ChangePassword ( char userName[], char newPassword[] );
 
@@ -71,7 +80,8 @@ int DeleteAllUserGraphics ( char userName[] );
 int DeleteGraphic ( char userName[], char graphicKey[] );
 int BinarySearchGraphicKey ( char graphicKey[], GRAPHICS* result );
 
-void crearTexto(SDL_Renderer *renderer, TTF_Font *font, SDL_Color white, char string[], int posX , int posY);
+void createText(SDL_Renderer *renderer, TTF_Font *font, SDL_Color color, char string[], int posX , int posY);
+
 
 //Funcion para comparar dos mismos elementos de un un campo en un array de estructuras USER
 /*struct0: primera estructura para comparar, struct1: ssegunda estructura para comparar, field: campo en el que se comparara*/
@@ -83,7 +93,7 @@ int CompareUsers( USER *struct0, USER *struct1, char *field ) {
     else if ( strcmp( field, "userName" ) == 0 ) 
         return strcmp( struct0->userName, struct1->userName );
     else
-        //en caso de rror retornara un -1000
+        //en caso de error retornara un -1000
         return -1000;
     //end if ( strcmp( field, "userKey" ) == 0 )
 }// end function  CompareUsers( USER *struct0, USER *struct1, char *field )
@@ -115,72 +125,6 @@ void BubbleSortUsers( USER originalStruct[], int numberRegisters, char *field ) 
 }
 
 
-
-/*Función que fusiona dos subvectores ordenados en un subvector ordenado
-originalStruct[]: array de estructura "original", start: indicador de inicio, half: indicador de mitad, end: indicador de final, field: campo en el que se ordenara*/
-void MergeUsers ( USER originalStruct[], int start, int half, int end, char *field ) {
-    /*sizeLeft: tamaño para el array de la izquierda, sizeRight: tamaño para el array de la derecha*/
-    int sizeLeft = half - start + 1, sizeRight = end - half;
-    // arrays temporales para realizar el algoritmo de merge sort 
-    USER left[ sizeLeft ], right[ sizeRight ];
-
-
-    /*Copia de los datos a los arrays temporales left[] y right[]
-    counterLeft: contador de la izquierda para copiar datos*/
-    for ( int counterLeft = 0; counterLeft < sizeLeft; counterLeft++ )
-        left[ counterLeft ] = originalStruct [ start + counterLeft ];
-    //end for ( int counter = 0; counter < sizeLeft; counter++ )
-
-    /*counterRight: contador de la derecha para copiar datos*/
-    for ( int counterRight = 0; counterRight < sizeRight; counterRight++ )
-        right[ counterRight ] = originalStruct [ half + counterRight + 1 ];
-    //end for ( int counter = 0; counter < sizeRight; counter++ )
-
-    /* Unimos los arrays temporales en arr[ inicio..fin ]
-    counterLeft: Índice inicial del primer subarray, counterRight: Índice inicial del segundo subarray
-    counterVector: Índice inicial del subarray unido*/
-    int counterLeft = 0, counterRight = 0, counterVector = start;
-
-    while ( counterLeft < sizeLeft && counterRight < sizeRight ) {
-        if ( CompareUsers ( &left [ counterLeft ], &right [ counterRight ], field ) <= 0 ) {
-            originalStruct [ counterVector ] = left [ counterLeft ];
-            counterLeft++;
-        } else {
-            originalStruct [ counterVector ] = right [ counterRight ];
-            counterRight++;
-        }//end if ( CompareUsers ( &left [ counterLeft ], &right [ counterRight ], field ) <= 0 )
-        counterVector++;
-    }//end while ( counterLeft < sizeLeft && counterRight < sizeRight )
-
-    // Copiamos los elementos restantes de left[], si hay algunos
-    while ( counterLeft < sizeLeft ) {
-        originalStruct[ counterVector ] = left [ counterLeft ];
-        counterLeft++;
-        counterVector++;
-    }//end while ( counterLeft < sizeLeft )
-
-    // Copiamos los elementos restantes de right[], si hay algunos
-    while ( counterRight < sizeRight ) {
-        originalStruct[ counterVector ] = right [ counterRight ];
-        counterRight++;
-        counterVector++;
-    }//end while ( counterRight < sizeRight )
-    return;
-}// end function MergeUsers ( USER originalStruct[], int start, int half, int end, char *field )
-
-/*Function que implementa el algoritmo Merge Sort
-originalStruct[]: array de estructura USER original, start: indicador de inicio, end: indicador de final, field: campo en el que se ordenara*/
-void MergeSortUsers ( USER originalStruct[], int start, int end, char *field ) {
-    if ( start < end ) {
-        // Lo mismo que (inicio+fin)/2, pero evita overflow para grandes inicio y fin
-        int half = start + ( end - start ) / 2;
-        // Ordena la primera y la segunda mitad
-        MergeSortUsers ( originalStruct, start, half, field );
-        MergeSortUsers ( originalStruct, half + 1, end, field );
-        MergeUsers ( originalStruct, start, half, end, field );
-    }//end if ( start < end )
-    return; 
-}// end function MergeSortUsers ( USER originalStruct[], int start, int end, char *field )
 
 /*Funcion para leer los usuarios de un vecor
 vector[]: array/vector donde se guardara los registros */
@@ -225,7 +169,6 @@ void OrganizeUsersFile () {
 
     ReadUsersFile( usersVector );
     BubbleSortUsers ( usersVector, numberRegisters - 1, fieldToSort );
-    //MergeSortUsers( usersVector, 0, numberRegisters - 1, fieldToSort );
     WriteUsersFile( usersVector, numberRegisters );
 
     return;
@@ -323,58 +266,8 @@ int ComparePassword ( char passwordEntered[], USER originalUser ) {
     return 0;//retorna 0 si la contraseña ES igual
 }// end function ComparePassword ( char passwordEntered[], USER originalUser )
 
-/*Funcion para añadir un nuevo usuario*/
-void CreateNewUser () {
-    //usuario a añadir
-    USER newUser;
-    printf ( "Aplicativo - Graficador - UTP\nMenu para usuario XXXX Crear nuevo usuario\nEntre el nuevo usuario:\nUsername: " );
-    scanf ( "%s", newUser.userName );
-    printf ( "Password: " );
-    scanf ( "%s", newUser.password );
-    //estructura para buscar si ese usuario ya existe
-    USER userSearched;
-    //lugar donde se encuentra el usuario SI ES QUE EXISTE
-    int index = binarySearchUserName ( newUser.userName, &userSearched );
-    if ( index != -1 ) {
-        printf ( "USUARIO EXISTENTE\n" );
-        printf("Nombre encontrado en el indice %d:\n", index);
-        printf("userKey: %d, userName: %s, password: %s\n", userSearched.userKey, userSearched.userName, userSearched.password);
-    } else {
-        newUser.userKey = GetUserKey ();
-        EncryptPassword ( &newUser );
-        AddUserToFile ( newUser );
-        OrganizeUsersFile();
-    }//end if ( index != -1 )
-    return;
-}//end function CreateNewUser ()
 
 
-
-/*Funcion para ingresar usuario*/
-void LoginUser () {
-    //usuario a ingresar
-    USER user;
-    printf ( "Aplicativo - Graficador - UTP\nMenu para usuario XXXX Ingresar usuario\nEntre el usuario:\nUsername: " );
-    scanf ( "%s", user.userName );
-    printf ( "Password: " );
-    scanf ( "%s", user.password );
-    //estructura para buscar si ese usuario si existe
-    USER userSearched;
-    //lugar donde se encuentra el usuario SI ES QUE EXISTE
-    int index = binarySearchUserName ( user.userName, &userSearched );
-    if ( index != -1 ) {
-        printf ( "USUARIO EXISTENTE\n" );
-        EncryptPassword ( &user );
-        printf ( "contraseña igresada: %s\n", user.password );
-        if ( ComparePassword ( user.password, userSearched ) == 0 )
-            printf("CONTRASEÑA CORRECTA\n" );
-        else 
-            printf("CONTRASEÑA INCORRECTA\n");
-    } else {
-        printf ( "USUARIO NO EXISTENTE\n" );
-    }//end if ( index != -1 )
-    return;
-}//end function CreateNewUser ()
 
 
 /*----------------------------------------------------------------------------------FUNCIONES ENCRIPTAMIENTO DE CONTRASEÑA DE USUARIO---------------------------------------------------------------------------------------------*/
@@ -527,7 +420,6 @@ int DeleteUser ( char userName[] ) {
     usersVector[ userPosition ] = user;
     //se organiza el archivo
     BubbleSortUsers ( usersVector, numberRegisters - 1, fieldToSort );
-    //MergeSortUsers( usersVector, 0, numberRegisters - 1, fieldToSort );
     //se escribe le archivo con el cambio hecho
     WriteUsersFile( usersVector, numberRegisters );
     //Se borran todas las graficas del usuario
@@ -565,7 +457,6 @@ void ChangePassword ( char userName[], char newPassword[] ){
     usersVector[ userPosition ] = user;
     //se organiza el archivo
     BubbleSortUsers ( usersVector, numberRegisters - 1, fieldToSort );
-    //MergeSortUsers( usersVector, 0, numberRegisters - 1, fieldToSort );
     //se escribe le archivo con el cambio hecho
     WriteUsersFile( usersVector, numberRegisters );
 
@@ -575,21 +466,21 @@ void ChangePassword ( char userName[], char newPassword[] ){
 
 /*------------------------------------------------------------FUNCIONES PARA AGREGAR GRAFICO A EL ARCHIVO----------------------------------------------------------------------------------------*/
 
-/*Funcion para crear la fecha actual en el sistema que se ejecuta
-graphic: estructura GRAPHICS en la cual se pondra la fecha actual*/
+/*Funcion para crear la date actual en el sistema que se ejecuta
+graphic: estructura GRAPHICS en la cual se pondra la date actual*/
 void CreateDate( GRAPHICS *graphic ) {
-    // Obteniendo la fecha y hora actual
+    // Obteniendo la date y hora actual
     // currentTime: almacena la hora actual del sistema en forma de un valor de tiempo.
     time_t currentTime;
-    // timeInformation: Almacena la información desglosada de la fecha e icnluso la hora en la estructura pereteneciente al lenguaje llamada tm
+    // timeInformation: Almacena la información desglosada de la date e icnluso la hora en la estructura pereteneciente al lenguaje llamada tm
     struct tm *timeInformation;
 
     // Obteniendo el tiempo actual del SISTEMA 
     time( &currentTime );
-    // Convierte el tiempo a la estructura de fecha y hora local
+    // Convierte el tiempo a la estructura de date y hora local
     timeInformation = localtime( &currentTime );
 
-    // Formatea la fecha actual
+    // Formatea la date actual
     strftime( graphic->date, sizeof( graphic->date ), "%Y-%m-%d", timeInformation );
 
     return;
@@ -891,7 +782,7 @@ void GetUserGraphicsVector ( char userName[], GRAPHICS userGraphicsVector[] ) {
         userGraphicsVector[ indexUserGraphicsVector ] = graphicsTotalVector[ forIndex ];
         indexUserGraphicsVector++;
     }//end for ( int forIndex = indexGraphicsTotalVector + 1; forIndex != numberRegisters && strcmp ( graphicsTotalVector[ forIndex ].userName, userName ) == 0 ; forIndex++  )
-    //se ordena medainte metodo de burbuja por le campo de "graphicKey" ya que al darse el graphicKey por orden de entrada de grafica, este puede ayudar a organizar por fecha
+    //se ordena medainte metodo de burbuja por le campo de "graphicKey" ya que al darse el graphicKey por orden de entrada de grafica, este puede ayudar a organizar por date
     BubbleSortGraphics ( userGraphicsVector, indexUserGraphicsVector - 1, "graphicKey" );
     return;
 }
@@ -968,7 +859,7 @@ int DeleteGraphic ( char userName[], char graphicKey[] ) {
     //Si no se encontro el grafico se retorna -2 
     if ( graphicPosition == -1 || graphic.userName[0] == '!' )
         return -2;
-    //end if ( graphicPosition == -1 )
+    //end if ( graphicPosition == -1 || graphic.userName[0] == '!' )
 
     //Si el usuario que desea borrar el grafico no es el mismo que el dueño del grafico se retorna un -1
     if ( strcmp ( userName, graphic.userName ) != 0 )
@@ -1162,16 +1053,17 @@ void GraphCase1(SDL_Renderer *renderer, TTF_Font *font, char function[], int x1,
     y2 = height1 - ((CalculateResult(aux, xmin+increment)/maximum)*height);
     SDL_RenderDrawLine(renderer, x1, y1, x2, y2 );
     
-
+    //Estructura para aplicar el color azul
+    SDL_Color color; color.r = 0; color.g = 0; color.b = 255; color.a = 255; 
     for( int i = xmin+(2*increment); i <= xmax; i = i+increment ){
-        crearTexto(renderer, font, {0, 0, 255, 255},"X", x1-5, y1-10);
+        createText(renderer, font, color,"X", x1-5, y1-10);
         strcpy(aux, function);
         x1 = x2; 
         x2 = x1 + divX;
         y1 = y2; 
         y2 = height1 - ((CalculateResult(aux, i)/maximum)*height);
         SDL_RenderDrawLine(renderer, x1, y1, x2, y2 );
-        crearTexto(renderer, font, {0, 0, 255, 255},"X", x2-5, y2-10);
+        createText(renderer, font, color,"X", x2-5, y2-10);
     }
 }
 // fin de la función "GraphicCase1".
@@ -1191,15 +1083,18 @@ void GraphCase2(SDL_Renderer *renderer, TTF_Font *font, char function[], int x1,
     y2 = height1 - ((CalculateResult(aux, xmin+increment)/maximum)*height);
     SDL_RenderDrawLine(renderer, x1, y1, x2, y2 );
 
+    //Estructura para aplicar el color azul
+    SDL_Color color; color.r = 0; color.g = 0; color.b = 255; color.a = 255; 
+
     for( int i = xmin+(2*increment); i <= xmax; i = i+increment ){
-        crearTexto(renderer, font, {0, 0, 255, 255},"X", x1-5, y1-10);
+        createText(renderer, font, color,"X", x1-5, y1-10);
         strcpy(aux, function);
         x1 = x2; 
         x2 = x1 + divX;
         y1 = y2; 
         y2 = height1 - ((CalculateResult(aux, i)/maximum)*height);
         SDL_RenderDrawLine(renderer, x1, y1, x2, y2 );
-        crearTexto(renderer, font, {0, 0, 255, 255},"X", x2-5, y2-10);
+        createText(renderer, font, color,"X", x2-5, y2-10);
     }
 }
 // fin de la función "GraphicCase2".
@@ -1219,15 +1114,18 @@ void GraphCase3(SDL_Renderer *renderer, TTF_Font *font, char function[], int x1,
     y2 = height1 - ((CalculateResult(aux, xmin+increment)/maximum)*height);
     SDL_RenderDrawLine(renderer, x1, y1, x2, y2 );
 
+    //Estructura para aplicar el color azul
+    SDL_Color color; color.r = 0; color.g = 0; color.b = 255; color.a = 255; 
+
     for( int i = xmin+(2*increment); i <= xmax; i = i+increment ){
-        crearTexto(renderer, font, {0, 0, 255, 255},"X", x1-5, y1-10);
+        createText(renderer, font, color,"X", x1-5, y1-10);
         strcpy(aux, function);
         x1 = x2; 
         x2 = x1 + divX;
         y1 = y2; 
         y2 = height1 - ((CalculateResult(aux, i)/maximum)*height);
         SDL_RenderDrawLine(renderer, x1, y1, x2, y2 );
-        crearTexto(renderer, font, {0, 0, 255, 255},"X", x2-5, y2-10);
+        createText(renderer, font, color,"X", x2-5, y2-10);
     }
 }
 // fin de la función "GraphicCase3".
@@ -1247,15 +1145,18 @@ void GraphCase4(SDL_Renderer *renderer, TTF_Font *font, char function[], int x1,
     y2 = height1 - ((CalculateResult(aux, xmin+increment)/maximum)*height);
     SDL_RenderDrawLine(renderer, x1, y1, x2, y2 );
 
+    //Estructura para aplicar el color azul
+    SDL_Color color; color.r = 0; color.g = 0; color.b = 255; color.a = 255; 
+
     for( int i = xmin+(2*increment); i <= xmax; i = i+increment ){
-        crearTexto(renderer, font, {0, 0, 255, 255},"X", x1-5, y1-10);
+        createText(renderer, font, color,"X", x1-5, y1-10);
         strcpy(aux, function);
         x1 = x2; 
         x2 = x1 + divX;
         y1 = y2; 
         y2 = height1 - ((CalculateResult(aux, i)/maximum)*height);
         SDL_RenderDrawLine(renderer, x1, y1, x2, y2 );
-        crearTexto(renderer, font, {0, 0, 255, 255},"X", x2-5, y2-10);
+        createText(renderer, font, color,"X", x2-5, y2-10);
     }
 }
 // fin de la función "GraphicCase4".
@@ -1276,15 +1177,18 @@ void GraphCase5(SDL_Renderer *renderer, TTF_Font *font, char function[], int x1,
     y2 = height1 - ((CalculateResult(aux, xmin+increment)/maximum)*height);
     SDL_RenderDrawLine(renderer, x1, y1, x2, y2 );
 
+    //Estructura para aplicar el color azul
+    SDL_Color color; color.r = 0; color.g = 0; color.b = 255; color.a = 255; 
+
     for( int i = xmin+(2*increment); i <= xmax; i = i+increment ){
-        crearTexto(renderer, font, {0, 0, 255, 255},"X", x1-5, y1-10);
+        createText(renderer, font, color,"X", x1-5, y1-10);
         strcpy(aux, function);
         x1 = x2; 
         x2 = x1 + divX;
         y1 = y2; 
         y2 = height1 - ((CalculateResult(aux, i)/maximum)*height);
         SDL_RenderDrawLine(renderer, x1, y1, x2, y2 );
-        crearTexto(renderer, font, {0, 0, 255, 255},"X", x2-5, y2-10);
+        createText(renderer, font, color,"X", x2-5, y2-10);
     }
 }
 // fin de la función "GraphicCase5".
@@ -1305,15 +1209,18 @@ void GraphCase6(SDL_Renderer *renderer, TTF_Font *font, char function[], int x1,
     y2 = height1 - ((CalculateResult(aux, xmin+increment)/maximum)*height);
     SDL_RenderDrawLine(renderer, x1, y1, x2, y2 );
 
+    //Estructura para aplicar el color azul
+    SDL_Color color; color.r = 0; color.g = 0; color.b = 255; color.a = 255; 
+
     for( int i = xmin+(2*increment); i <= xmax; i = i+increment ){
-        crearTexto(renderer, font, {0, 0, 255, 255},"X", x1-5, y1-10);
+        createText(renderer, font, color,"X", x1-5, y1-10);
         strcpy(aux, function);
         x1 = x2; 
         x2 = x1 + divX;
         y1 = y2; 
         y2 = height1 - ((CalculateResult(aux, i)/maximum)*height);
         SDL_RenderDrawLine(renderer, x1, y1, x2, y2 );
-        crearTexto(renderer, font, {0, 0, 255, 255},"X", x2-5, y2-10);
+        createText(renderer, font, color,"X", x2-5, y2-10);
     }
 }
 // fin de la función "GraphicCase6".
@@ -1333,15 +1240,18 @@ void GraphCase7(SDL_Renderer *renderer, TTF_Font *font, char function[], int x1,
     y2 = height1 - ((CalculateResult(aux, xmin+increment)/maximum)*height);
     SDL_RenderDrawLine(renderer, x1, y1, x2, y2 );
 
+    //Estructura para aplicar el color azul
+    SDL_Color color; color.r = 0; color.g = 0; color.b = 255; color.a = 255; 
+
     for( int i = xmin+(2*increment); i <= xmax; i = i+increment ){
-        crearTexto(renderer, font, {0, 0, 255, 255},"X", x1-5, y1-10);
+        createText(renderer, font, color,"X", x1-5, y1-10);
         strcpy(aux, function);
         x1 = x2; 
         x2 = x1 + divX;
         y1 = y2; 
         y2 = height1 - ((CalculateResult(aux, i)/maximum)*height);
         SDL_RenderDrawLine(renderer, x1, y1, x2, y2 );
-        crearTexto(renderer, font, {0, 0, 255, 255},"X", x2-5, y2-10);
+        createText(renderer, font, color,"X", x2-5, y2-10);
     }
 }
 // fin de la función "GraphicCase7".
@@ -1361,15 +1271,19 @@ void GraphCase8(SDL_Renderer *renderer, TTF_Font *font, char function[], int x1,
     y2 = height1 - ((CalculateResult(aux, xmin+increment)/maximum)*height);
     SDL_RenderDrawLine(renderer, x1, y1, x2, y2 );
 
+    //Estructura para aplicar el color azul
+    SDL_Color color; color.r = 0; color.g = 0; color.b = 255; color.a = 255; 
+
+
     for( int i = xmin+(2*increment); i <= xmax; i = i+increment ){
-        crearTexto(renderer, font, {0, 0, 255, 255},"X", x1-5, y1-10);
+        createText(renderer, font, color,"X", x1-5, y1-10);
         strcpy(aux, function);
         x1 = x2; 
         x2 = x1 + divX;
         y1 = y2; 
         y2 = height1 - ((CalculateResult(aux, i)/maximum)*height);
         SDL_RenderDrawLine(renderer, x1, y1, x2, y2 );
-        crearTexto(renderer, font, {0, 0, 255, 255},"X", x2-5, y2-10);
+        createText(renderer, font, color,"X", x2-5, y2-10);
     }
 }
 // fin de la función "GraphicCase8".
@@ -1395,15 +1309,18 @@ void GraphCase9(SDL_Renderer *renderer, TTF_Font *font, char function[], int x1,
         y2 = height1 - ((CalculateResult(aux, xmin+increment)/maximum)*(height1-height1+120));
         SDL_RenderDrawLine(renderer, x1, y1, x2, y2 );
 
+        //Estructura para aplicar el color azul
+        SDL_Color color; color.r = 0; color.g = 0; color.b = 255; color.a = 255; 
+
         for( int i = xmin+(2*increment); i <= xmax; i = i+increment ){
-            crearTexto(renderer, font, {0, 0, 255, 255},"X", x1-5, y1-10);
+            createText(renderer, font, color,"X", x1-5, y1-10);
             strcpy(aux, function);
             x1 = x2; 
             x2 = x1 + divX;
             y1 = y2; 
             y2 = height1 - ((CalculateResult(aux, i)/maximum)*(height1-height1+120));
             SDL_RenderDrawLine(renderer, x1, y1, x2, y2 );
-            crearTexto(renderer, font, {0, 0, 255, 255},"X", x2-5, y2-10);
+            createText(renderer, font, color,"X", x2-5, y2-10);
         } 
 
     } else{
@@ -1417,16 +1334,19 @@ void GraphCase9(SDL_Renderer *renderer, TTF_Font *font, char function[], int x1,
         strcpy(aux, function);
         y2 = height1 - ((CalculateResult(aux, xmin+increment)/maximum)*(height1-120));
         SDL_RenderDrawLine(renderer, x1, y1, x2, y2 );
+    
+        //Estructura para aplicar el color azul
+        SDL_Color color; color.r = 0; color.g = 0; color.b = 255; color.a = 255; 
 
         for( int i = xmin+(2*increment); i <= xmax; i = i+increment ){
-            crearTexto(renderer, font, {0, 0, 255, 255},"X", x1-5, y1-10);
+            createText(renderer, font, color,"X", x1-5, y1-10);
             strcpy(aux, function);
             x1 = x2; 
             x2 = x1 + divX;
             y1 = y2; 
             y2 = height1 - ((CalculateResult(aux, i)/maximum)*(height1-120));
             SDL_RenderDrawLine(renderer, x1, y1, x2, y2 );
-            crearTexto(renderer, font, {0, 0, 255, 255},"X", x2-5, y2-10);
+            createText(renderer, font, color,"X", x2-5, y2-10);
         }
     }
 }
@@ -1441,39 +1361,43 @@ void CreateAxis(SDL_Renderer *renderer, TTF_Font *font, int xmin, int xmax, doub
     int endY = WINDOW_HEIGHT - 20; // se define la variable "endY", en esta se almacena la coordenada final para el eje Y.
     int ubiX = 0, ubiY = 0; // se definen variables "ubiX" y "ubiY", en estas se almacenan las coordenadas para los ejes X e Y respectivamente 
                             // en caso de que estos se deban desplazar acorde a la gráfica de la función.
-    SDL_SetRenderDrawColor(renderer, 255,0,0,255);
+    char maxText[sizeof(xmax)] = "";
+    char minText[sizeof(xmin)] = "";
+
+    sprintf(maxText, "%i", xmax);
+    sprintf(minText, "%i", xmin);
+    
+
     // UBICACIÓN DEL EJE Y
-    if( xmin >= 0 ){
+    if( xmin >= 0 )
         SDL_RenderDrawLine(renderer, startX, startY, startX, endY);
-
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-        for( int i = startX; i <= endX; i+=divX){
-            SDL_RenderDrawLine(renderer, i, startY, i, endY );
-        } 
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-    }
-    else if( xmax <= 0 ){
+    else if( xmax <= 0 )
         SDL_RenderDrawLine(renderer, endX, startY, endX, endY);
-        
-        for( int i = startX; i <= endX; i+=divX){
-            SDL_RenderDrawLine(renderer, i, startY, i, endY );
-        } 
-
-    }
     else{
         ubiX = 20 + (abs(xmin)*divX)/increment; 
-        SDL_RenderDrawLine(renderer, ubiX, startY, ubiX, endY);
-
-        for( int i = startX; i <= endX; i+=divX){
-            SDL_RenderDrawLine(renderer, i, startY, i, endY );
-        } 
+        SDL_RenderDrawLine(renderer, ubiX, startY, ubiX, endY); 
     } 
 
+    //estructura de color rojo
+    SDL_Color red = {255, 0, 0, 255};
+    //estructura de color negro
+    SDL_Color black = {0, 0, 0, 255};
+
     // UBICACIÓN DEL EJE X
-    if( ymin >= 0 )
+    if( ymin >= 0 ){
         SDL_RenderDrawLine(renderer, startX, endY, endX, endY);
-    else if( ymax <= 0 )
+        createText(renderer, font, red, "|", startX-1, endY-10);
+        createText(renderer, font, red, "|", endX, endY-10);
+        createText(renderer, font, black, minText, startX, endY);
+        createText(renderer, font, black, maxText, endX, endY);
+    }
+    else if( ymax <= 0 ){
         SDL_RenderDrawLine(renderer, startX, startY, endX, startY);
+        createText(renderer, font, red, "|", startX-1, startY-10);
+        createText(renderer, font, red, "|", endX, startY-10);
+        createText(renderer, font, black, minText, startX, startY);
+        createText(renderer, font, black, maxText, endX, startY);
+    }
     else{
         if(maximum>ymax)
             ubiY = endY - (500*maximum/(abs(ymin)+abs(ymax)));
@@ -1481,8 +1405,11 @@ void CreateAxis(SDL_Renderer *renderer, TTF_Font *font, int xmin, int xmax, doub
             ubiY = 120 + (500*maximum/(abs(ymin)+abs(ymax)));
     
         SDL_RenderDrawLine(renderer, startX, ubiY, endX, ubiY);
+        createText(renderer, font, red, "|", startX-1, ubiY-10);
+        createText(renderer, font, red, "|", endX, ubiY-10);
+        createText(renderer, font, black, minText, startX, ubiY);
+        createText(renderer, font, black, maxText, endX, ubiY);
     }
-    SDL_SetRenderDrawColor(renderer, 0,0,0,255);
 }
 // fin de la función "CreateAxis".
 
@@ -1529,9 +1456,9 @@ void GraphFunction(SDL_Renderer *renderer, TTF_Font *font, char function[], int 
     else
         valueMax = ymax; 
 
-
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255); // Negro
+    SDL_SetRenderDrawColor(renderer, 255,0,0,255);
     CreateAxis(renderer, font, lowerBound, upperBound, ymax, ymin, divX, valueMax, increment);
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255); // Negro
     
     int x1=0, x2=0, y1=0, y2=0; // se definen las variables "x1, x2, y1, y2", estas almacenarán las coordenadas iniciales (x1, y1) y las coordenadas
                                 // finales (x2, y2) en las que se graficará la linea.
@@ -1575,23 +1502,27 @@ void DelateLastChar(char *cadena) {
 }
 
 
-void toLowerCase(char *str) {
+// funcion que pasa una cadena que contenga mayusculas a minusculas
+void toLowerCase(char *str) { 
     int i;
     for (i = 0; str[i]; i++) {
         str[i] = tolower((unsigned char)str[i]);
     }
 }
 
-void RellenarCadena(char *cadenaALlenar, int size){
+// Esta funcion rellena un string con espacios en los espacios faltantes para llenarla
+void FillString(char *cadenaALlenar, int size){
     for ( int i= strlen(cadenaALlenar); i<size-1;i++ ){
         cadenaALlenar[i]=' ';
     }
     cadenaALlenar[size-1]='\0';
 }
 
-void crearTexto(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white, char string[], int posX , int posY){
+
+// Esta funcion Es usada para crear un texto en la pantalla 
+void createText(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color color, char string[], int posX , int posY){
         char otro_texto[50] = "2"; strcpy(otro_texto,string);// Define otra variable de cadena para el nuevo texto
-        SDL_Surface* otro_texto_surface = TTF_RenderText_Solid(font, otro_texto, white);
+        SDL_Surface* otro_texto_surface = TTF_RenderText_Solid(font, otro_texto, color);
         SDL_Texture* otro_texto_texture = SDL_CreateTextureFromSurface(renderer, otro_texto_surface);
         int otro_texto_width = otro_texto_surface->w;
         int otro_texto_height = otro_texto_surface->h;
@@ -1602,26 +1533,26 @@ void crearTexto(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white, char s
 }
 
 
-void moduloCrearUsuario(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white){
+void CreateUser(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color color){
     // Para este programa se ha decidido que los string se inicializaran con " "
     char userName[20] = " ";  // Es el el string que guarda el nombre de usuario que se entre
     char passHidded[40]=" "; // Es la contraseña enmascarada  (ejemplo: ****)
     char passWord[13]=" ";  // Es la contraseña sin enmascarar (ejemplo: hola)
     int  writingUser=0;    // Esta varible permite identificar que campo se esta escribiendo siendo { 0 = userName , 1 = password }
-    char warnings[70]="AQUI PONDRE LA CONRASEÑA QUE DEBE PONER:"; // Variable para poner advertencias o indicativos que se le deban dar al usuario
+    char warnings[70]="AQUI PONDRE LA CONRASEÑA QUE DEBE PONER:"; // Variable para poner advertencias o Indicatives que se le deban dar al usuario
     char titleOfModule[50] = "Aplicativo - Graficadora - UTP"; // titulo que se le pone al modulo
-    char userNameLabel[20]="Username: "; // indicativo de lo que se debe escribir es el nombre de usuario
+    char userNameLabel[20]="Username: "; // Indicative de lo que se debe escribir es el nombre de usuario
     int exitApp=0; //necesita habilitar para que cuando se presione cualquier tecla se finalice el programa
     int exitAppAuxiliar=0; // Es la variable encargada de habilitar exitApp a 1 (podria ser cualquier numero mayor a 0)
     char warnings2[70]="AQUI PONDRE LA CONTRASEÑA QUE EL USARIO INGRESA: ";
-    //while (running) mantiene actualizando el modulo actual , esto para que el usuario pueda ver lo que va escribiendo
+    //while (flag) mantiene actualizando el modulo actual , esto para que el usuario pueda ver lo que va escribiendo
     int flag=1;
     while (flag) {
 
         SDL_Event event; // event es una variable tipo evento , estas variables guardan lo que ha sucedido en el aplicativo
         // while (SDL_PollEvent(&event)) , ira mirando cada uno de los eventos que esten guardados en event
         while (SDL_PollEvent(&event)) { 
-            if (event.type == SDL_QUIT || exitApp) { // si se debe finalizar el programa
+            if (exitApp) { // si se debe finalizar el programa
                 flag = 0;
             }
 
@@ -1644,15 +1575,15 @@ void moduloCrearUsuario(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white
                 }else if (event.key.keysym.sym >= SDLK_0 && event.key.keysym.sym <= SDLK_9  ){
                         strcat(userName,SDL_GetKeyName(event.key.keysym.sym));
                 }else if (event.key.keysym.sym == SDLK_RETURN){
-                        USER bellavista; 
-                        RellenarCadena(userName,20);            
-                        int index = binarySearchUserName(userName,&bellavista);
+                        USER userToCreate; 
+                        FillString(userName,20);            
+                        int index = binarySearchUserName(userName,&userToCreate);
                         if ( index !=-1){
                             strcpy(warnings, "USUARIO YA EXISTE");
                         }else{
                             strcpy(passHidded, "Password: ");
-                            strcpy(bellavista.userName,  userName);
-                            strcpy(warnings, bellavista.userName);
+                            strcpy(userToCreate.userName,  userName);
+                            strcpy(warnings, userToCreate.userName);
                             writingUser= 1;    
                         }                   
                 }
@@ -1664,10 +1595,10 @@ void moduloCrearUsuario(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white
                         if (SDL_GetModState() & KMOD_CAPS || SDL_GetModState() & KMOD_SHIFT){
                             strcat(passWord,SDL_GetKeyName(event.key.keysym.sym));
                         }else {
-                            char ara[12];
-                            strcpy(ara,SDL_GetKeyName(event.key.keysym.sym));
-                            toLowerCase(ara);
-                            strcat(passWord,ara);
+                            char stringLikeChar[12];
+                            strcpy(stringLikeChar,SDL_GetKeyName(event.key.keysym.sym));
+                            toLowerCase(stringLikeChar);
+                            strcat(passWord,stringLikeChar);
                         }
                     }else if (event.key.keysym.sym >= SDLK_0 && event.key.keysym.sym <= SDLK_9  ){
                         strcat(passHidded,"*");
@@ -1675,8 +1606,8 @@ void moduloCrearUsuario(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white
                     }else if (event.key.keysym.sym == SDLK_RETURN ){
                             if (strlen(passWord) >=5){
                                 USER newUser;
-                                RellenarCadena(userName,20);
-                                RellenarCadena(passWord,13);
+                                FillString(userName,20);
+                                FillString(passWord,13);
                                 strcpy ( newUser.userName, userName );
                                 strcpy ( newUser.password, passWord );
                                 newUser.userKey= GetUserKey();
@@ -1700,42 +1631,43 @@ void moduloCrearUsuario(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white
         SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
         SDL_RenderClear(renderer);
         
-        crearTexto(renderer , font, white, userName, 80,50); //renderiza el texto que contiene lo que el usuario vaya ingresando
-        crearTexto(renderer , font, white, titleOfModule, 5,10);
-        crearTexto(renderer , font, white, userNameLabel, 10,50); //renderiza la el texto "Usermame: " como indicativo
-        crearTexto(renderer,font,white, passHidded, 10,75);
-        crearTexto(renderer,font,white,warnings,10,120); //renderiza las advertencias que se tengan que hacer
-        crearTexto(renderer,font,white,warnings2,10,140); //renderiza las advertencias que se tengan que hacer
+        createText(renderer , font, color, userName, 80,50); //renderiza el texto que contiene lo que el usuario vaya ingresando
+        createText(renderer , font, color, titleOfModule, 5,10);
+        createText(renderer , font, color, userNameLabel, 10,50); //renderiza la el texto "Usermame: " como Indicative
+        createText(renderer,font,color, passHidded, 10,75);
+        createText(renderer,font,color,warnings,10,120); //renderiza las advertencias que se tengan que hacer
+        createText(renderer,font,color,warnings2,10,140); //renderiza las advertencias que se tengan que hacer
 
         // Actualizar pantalla
         SDL_RenderPresent(renderer);
     }
 }
 
-void crearGrafico(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white, char nombreUsuario[]){
+void CreateGraphic(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color color, char userNameParemeter[]){
     char title[40]= "APLICATIVO - GRAFICADOR - UTP";
     char subTitle[60]= "Crear Grafico";
-    char indicativo[80]= "C = Coeficiente , E = exponente , entre termino en formato CXE de tenerlos";
-    char indicativo2[80]= "Rango en formato Inicio,final ejem: -10,15 ";
-    char indicativoEcuacion[40]= "f(x)=";
+    char Indicative[80]= "C = Coeficiente , E = exponente , entre termino en formato CXE de tenerlos";
+    char Indicative2[80]= "Rango en formato Inicio,final ejem: -10,15 ";
+    char IndicativeEcuacion[40]= "f(x)=";
     char ecuacion[30]=" ";
-    char indicativoRango[40]= "Rango=";
-    char rango[20]=" ";
-    char indicativoIncremento[40]= "Incremento=";
+    char IndicativeRange[40]= "Rango=";
+    char range[20]=" ";
+    char IndicativeIncremento[40]= "Incremento=";
     char incremento[40]= " ";
     int userWriting=0;
     char ecuacionAuxilair[30];
-    int rangoInferior= 0;
-    int rangoSuperior= 0;
+    int LowerBound= 0;
+    int UpperBound= 0;
     int incrementador=0;
-    int running1=1;
+    int flag=1;
+    char rangoCopy[20] = " ";
 
 
-    while (running1) {
+    while (flag) {
         SDL_Event event;
             while (SDL_PollEvent(&event)) {
                 if (event.type == SDL_QUIT ) {
-                    running = 0;
+                    flag = 0;
                 }else if(event.type==SDL_KEYDOWN){
 
                 if ( userWriting==0){
@@ -1743,10 +1675,10 @@ void crearGrafico(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white, char
                         if (SDL_GetModState() & KMOD_CAPS || SDL_GetModState() & KMOD_SHIFT){
                             strcat(ecuacion,SDL_GetKeyName(event.key.keysym.sym));
                         }else{
-                            char ara[20];
-                            strcpy(ara,SDL_GetKeyName(event.key.keysym.sym));
-                            toLowerCase(ara);
-                            strcat(ecuacion,ara);
+                            char stringLikeChar[20];
+                            strcpy(stringLikeChar,SDL_GetKeyName(event.key.keysym.sym));
+                            toLowerCase(stringLikeChar);
+                            strcat(ecuacion,stringLikeChar);
                         }
                     }else if (event.key.keysym.sym >= SDLK_0 && event.key.keysym.sym <= SDLK_9  ){
                             strcat(ecuacion,SDL_GetKeyName(event.key.keysym.sym));
@@ -1755,9 +1687,9 @@ void crearGrafico(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white, char
                     }
                     }else if (userWriting==1){
                         if (event.key.keysym.sym == SDLK_COMMA || event.key.keysym.sym == SDLK_MINUS){
-                                strcat(rango,SDL_GetKeyName(event.key.keysym.sym));
+                                strcat(range,SDL_GetKeyName(event.key.keysym.sym));
                         }else if (event.key.keysym.sym >= SDLK_0 && event.key.keysym.sym <= SDLK_9  ){
-                                strcat(rango,SDL_GetKeyName(event.key.keysym.sym));
+                                strcat(range,SDL_GetKeyName(event.key.keysym.sym));
                         }else if (event.key.keysym.sym == SDLK_RETURN){
                             userWriting=2;
                         }
@@ -1766,11 +1698,12 @@ void crearGrafico(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white, char
                                 strcat(incremento,SDL_GetKeyName(event.key.keysym.sym));
                         }else if (event.key.keysym.sym == SDLK_RETURN){
                             strcpy(ecuacionAuxilair,ecuacion+1);
-                            rangoInferior= atoi(strtok(rango,","));
-                            rangoSuperior= atoi(strtok(NULL, " "));
+                            strcpy ( rangoCopy, range );
+                            LowerBound= atoi(strtok(rangoCopy,","));
+                            UpperBound= atoi(strtok(NULL, " "));
                             incrementador= atoi(incremento);
-                            AddGraphicToFile ( nombreUsuario, ecuacionAuxilair, rangoInferior, rangoSuperior, incrementador );
-                            running1=0;
+                            AddGraphicToFile ( userNameParemeter, ecuacionAuxilair, LowerBound, UpperBound, incrementador );
+                            flag=0;
                         }
 
                     }
@@ -1778,79 +1711,81 @@ void crearGrafico(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white, char
         SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
         SDL_RenderClear(renderer);
 
-        crearTexto(renderer , font, white, title, 10,10);
-        crearTexto(renderer , font, white, subTitle, 15,30);
-        crearTexto(renderer , font, white, indicativo, 10,50);
-        crearTexto(renderer , font, white, indicativo2, 10,70);
-        crearTexto(renderer , font, white, indicativoEcuacion, 10,90);
-        crearTexto(renderer , font, white, ecuacion, 40,90);
-        crearTexto(renderer , font, white, indicativoRango, 160,90);
-        crearTexto(renderer , font, white, rango, 210,90);
-        crearTexto(renderer , font, white, indicativoIncremento, 310,90);
-        crearTexto(renderer , font, white, incremento, 400,90);
+        createText(renderer , font, color, title, 10,10);
+        createText(renderer , font, color, subTitle, 15,30);
+        createText(renderer , font, color, Indicative, 10,50);
+        createText(renderer , font, color, Indicative2, 10,70);
+        createText(renderer , font, color, IndicativeEcuacion, 10,90);
+        createText(renderer , font, color, ecuacion, 40,90);
+        createText(renderer , font, color, IndicativeRange, 160,90);
+        createText(renderer , font, color, range, 210,90);
+        createText(renderer , font, color, IndicativeIncremento, 310,90);
+        createText(renderer , font, color, incremento, 400,90);
 
         // Actualizar pantalla
         SDL_RenderPresent(renderer);
         
     }
 }
-
-    GraphFunction(renderer, font, ecuacionAuxilair,rangoInferior,rangoSuperior,incrementador);
-while (running) {
-            SDL_Event event;
-            while (SDL_PollEvent(&event)) {
-                if (event.type == SDL_QUIT ) {
-                    running = 0;
+    int flag2=1;
+    GraphFunction(renderer, font, ecuacionAuxilair,LowerBound,UpperBound,incrementador);
+    FILE *file = fopen ( "graphicCounter.txt", "wb" );
+    int quantityGraphics = GetNumberGraphicKey ();
+    fprintf ( file, "%d", quantityGraphics );
+    fclose ( file );
+    while (flag2==2) {
+                SDL_Event event;
+                while (SDL_PollEvent(&event)) {
+                    if (event.type == SDL_QUIT ) {
+                        flag2 = 0;
+                    }
                 }
-            }
+    }
 }
 
 
-}
-
-
-void cambiarMiContrasena(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white, char nombreUsario[]){
+void ChangeMyPassword(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color color, char nombreUsario[]){
         char title[40]= "APLICATIVO - GRAFICADORA - UTP";
         char subTitle[60]= "Cambiar contraseña del usuario: "; strcat(subTitle, nombreUsario);
-        char indicativo[40]= "Entre contraseña actual:";
-        char contrasenaActual[13]=" ";char contrasenaActualOculta[40]=" ";
-        char indicativo2[40]=" ";
-        char contrasenaNueva[20]=" ";char contrasenaNuevaOculta[20]=" ";
-        char indicativo3[40]= " ";
-        char contrasenaNuevaConfirmacion[13]=" "; char contrasenaNuevaConfirmacionOculta[13]=" ";
+        char Indicative[40]= "Entre contraseña actual:";
+        char currentPassword[13]=" ";char currentPasswordhidden[40]=" ";
+        char Indicative2[40]=" ";
+        char newPassword[13]=" ";char newPasswordhidden[20]=" ";
+        char Indicative3[40]= " ";
+        char newPasswordConfirmacion[13]=" "; char newPasswordConfirmacionhidden[13]=" ";
         char warnings[40]=" ";
         int userWriting=0;
-        USER tin;
-        while (running) {
+        int flag =1;
+        while (flag==1) {
             SDL_Event event;
             while (SDL_PollEvent(&event)) {
                 if (event.type == SDL_QUIT ) {
-                    running = 0;
+                    flag = 0;
                 }else if(event.type==SDL_KEYDOWN){
 
                     if ( userWriting==0){
                         if (event.key.keysym.sym >= SDLK_a && event.key.keysym.sym <= SDLK_z){
                             if (SDL_GetModState() & KMOD_CAPS || SDL_GetModState() & KMOD_SHIFT){
-                                strcat(contrasenaActual,SDL_GetKeyName(event.key.keysym.sym));
-                                strcat(contrasenaActualOculta,"*");
+                                strcat(currentPassword,SDL_GetKeyName(event.key.keysym.sym));
+                                strcat(currentPasswordhidden,"*");
                             }else{
-                                char ara[20];
-                                strcpy(ara,SDL_GetKeyName(event.key.keysym.sym));
-                                toLowerCase(ara);
-                                strcat(contrasenaActual,ara);
-                                strcat(contrasenaActualOculta,"*");
+                                char stringLikeChar[20];
+                                strcpy(stringLikeChar,SDL_GetKeyName(event.key.keysym.sym));
+                                toLowerCase(stringLikeChar);
+                                strcat(currentPassword,stringLikeChar);
+                                strcat(currentPasswordhidden,"*");
                             }
                         }else if (event.key.keysym.sym >= SDLK_0 && event.key.keysym.sym <= SDLK_9  ){
-                                strcat(contrasenaActual,SDL_GetKeyName(event.key.keysym.sym));
-                                strcat(contrasenaActualOculta,"*");
+                                strcat(currentPassword,SDL_GetKeyName(event.key.keysym.sym));
+                                strcat(currentPasswordhidden,"*");
                         }else if (event.key.keysym.sym == SDLK_RETURN){
-                            RellenarCadena(contrasenaActual,13);
-                            USER tina ,personaje ;
-                            strcpy(tina.password, contrasenaActual);
-                            EncryptPassword(&tina);
-                            binarySearchUserName(nombreUsario ,&personaje);
-                            if ( ComparePassword(personaje.password, tina)==0){
-                                strcpy(indicativo2,"Entre contraseñan nueva: ");
+                            FillString(currentPassword,13);
+                            USER UserInFound ,UserInBase ;
+                            strcpy(UserInFound.password, currentPassword);
+                            EncryptPassword(&UserInFound);
+                            binarySearchUserName(nombreUsario ,&UserInBase);
+                            if ( ComparePassword(UserInBase.password, UserInFound)==0){
+                                strcpy(Indicative2,"Entre contraseñan nueva: ");
                                 userWriting=1;
                             }else{
                                 strcpy(warnings,"contrasena incorrecta");
@@ -1860,41 +1795,44 @@ void cambiarMiContrasena(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color whit
                     }else if ( userWriting==1){
                         if (event.key.keysym.sym >= SDLK_a && event.key.keysym.sym <= SDLK_z){
                             if (SDL_GetModState() & KMOD_CAPS || SDL_GetModState() & KMOD_SHIFT){
-                                strcat(contrasenaNueva,SDL_GetKeyName(event.key.keysym.sym));
-                                strcat(contrasenaNuevaOculta,"*");
+                                strcat(newPassword,SDL_GetKeyName(event.key.keysym.sym));
+                                strcat(newPasswordhidden,"*");
                             }else{
-                                char ara[20];
-                                strcpy(ara,SDL_GetKeyName(event.key.keysym.sym));
-                                toLowerCase(ara);
-                                strcat(contrasenaNueva,ara);
-                                strcat(contrasenaNuevaOculta,"*");
+                                char stringLikeChar[20];
+                                strcpy(stringLikeChar,SDL_GetKeyName(event.key.keysym.sym));
+                                toLowerCase(stringLikeChar);
+                                strcat(newPassword,stringLikeChar);
+                                strcat(newPasswordhidden,"*");
                             }
                         }else if (event.key.keysym.sym >= SDLK_0 && event.key.keysym.sym <= SDLK_9  ){
-                                strcat(contrasenaNueva,SDL_GetKeyName(event.key.keysym.sym));
-                                strcat(contrasenaNuevaOculta,"*");
+                                strcat(newPassword,SDL_GetKeyName(event.key.keysym.sym));
+                                strcat(newPasswordhidden,"*");
                         }else if (event.key.keysym.sym == SDLK_RETURN){
-                            strcpy(indicativo3,"Confirme contraseña nueva:");
+                            strcpy(Indicative3,"Confirme contraseña nueva:");
                             userWriting=2;
                         }
                     }else if ( userWriting==2){
                         if (event.key.keysym.sym >= SDLK_a && event.key.keysym.sym <= SDLK_z){
                             if (SDL_GetModState() & KMOD_CAPS || SDL_GetModState() & KMOD_SHIFT){
-                                strcat(contrasenaNuevaConfirmacion,SDL_GetKeyName(event.key.keysym.sym));
-                                strcat(contrasenaNuevaConfirmacionOculta,"*");
+                                strcat(newPasswordConfirmacion,SDL_GetKeyName(event.key.keysym.sym));
+                                strcat(newPasswordConfirmacionhidden,"*");
                             }else{
-                                char ara[20];
-                                strcpy(ara,SDL_GetKeyName(event.key.keysym.sym));
-                                toLowerCase(ara);
-                                strcat(contrasenaNuevaConfirmacion,ara);
-                                strcat(contrasenaNuevaConfirmacionOculta,"*");
+                                char stringLikeChar[20];
+                                strcpy(stringLikeChar,SDL_GetKeyName(event.key.keysym.sym));
+                                toLowerCase(stringLikeChar);
+                                strcat(newPasswordConfirmacion,stringLikeChar);
+                                strcat(newPasswordConfirmacionhidden,"*");
                             }
                         }else if (event.key.keysym.sym >= SDLK_0 && event.key.keysym.sym <= SDLK_9  ){
-                                strcat(contrasenaNuevaConfirmacion,SDL_GetKeyName(event.key.keysym.sym));
-                                strcat(contrasenaNuevaConfirmacionOculta,"*");
+                                strcat(newPasswordConfirmacion,SDL_GetKeyName(event.key.keysym.sym));
+                                strcat(newPasswordConfirmacionhidden,"*");
                         }else if (event.key.keysym.sym == SDLK_RETURN){
-                            if (strcmp(contrasenaNueva, contrasenaNuevaConfirmacion)==0){
-                                RellenarCadena(contrasenaNueva,13);
-                                ChangePassword(nombreUsario,contrasenaNueva);
+                            //se rellenan las cadenas para evitar que se compare basura
+                            FillString( newPassword, sizeof ( newPassword) );
+                            FillString( newPasswordConfirmacion, sizeof ( newPasswordConfirmacion) );
+                            if (strcmp(newPassword, newPasswordConfirmacion)==0){
+                                FillString(newPassword,13);
+                                ChangePassword(nombreUsario,newPassword);
                             }else{
                                 strcpy(warnings,"las contraseñas No coinciden");
                             }
@@ -1905,12 +1843,12 @@ void cambiarMiContrasena(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color whit
             SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
             SDL_RenderClear(renderer);
 
-            crearTexto(renderer , font, white, title, 10,10);
-            crearTexto(renderer , font, white, subTitle, 15,30);
-            crearTexto(renderer , font, white, indicativo, 10,50);crearTexto(renderer , font, white, contrasenaActualOculta, 180,50);
-            crearTexto(renderer , font, white, indicativo2, 10,70);crearTexto(renderer , font, white, contrasenaNuevaOculta, 180,70);
-            crearTexto(renderer , font, white, indicativo3, 10,90);;crearTexto(renderer , font, white, contrasenaNuevaConfirmacionOculta, 210,90);
-            crearTexto(renderer , font, white, warnings, 10,110);
+            createText(renderer , font, color, title, 10,10);
+            createText(renderer , font, color, subTitle, 15,30);
+            createText(renderer , font, color, Indicative, 10,50);createText(renderer , font, color, currentPasswordhidden, 180,50);
+            createText(renderer , font, color, Indicative2, 10,70);createText(renderer , font, color, newPasswordhidden, 180,70);
+            createText(renderer , font, color, Indicative3, 10,90);;createText(renderer , font, color, newPasswordConfirmacionhidden, 210,90);
+            createText(renderer , font, color, warnings, 10,110);
 
 
 
@@ -1924,21 +1862,21 @@ void cambiarMiContrasena(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color whit
 
 
 
-void cambiarContraRoot(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white){
+void cambiarContraRoot(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color color){
         char title[40]= "APLICATIVO - GRAFICADOR - UTP";
         char subTitle[60]= "Menu para usuario: root Actualizar contraseña ";
-        char indicativo1[40]= "Entre contraseña antigua:";
-        char contrasenaAntigua[13]=" ";
-        char contrasenaNuevaLabel[40]=" ";
-        char contrasenaNueva[13]=" ";
-        char contrasenaNuevaHidden[13]=" ";
+        char Indicative1[40]= "Entre contraseña antigua:";
+        char legacyPassword[13]=" ";
+        char newPasswordLabel[40]=" ";
+        char newPassword[13]=" ";
+        char newPasswordHidden[13]=" ";
         char contrasenaConfirmedLabel[40]=" ";
         char contrasenaConfirmed[13]=" ";
         char contrasenaConfirmedHidden[13]=" ";
         char warnings[60]=" ";
         int writingUser=0;
         int flag=1;
-        USER taca;
+        USER root1; //se guardara el usuario root
 
 
         while (flag) {
@@ -1951,27 +1889,27 @@ void cambiarContraRoot(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white)
                     if (writingUser==0){
                         if (event.key.keysym.sym >= SDLK_a && event.key.keysym.sym <= SDLK_z){
                             if (SDL_GetModState() & KMOD_CAPS || SDL_GetModState() & KMOD_SHIFT){
-                                strcat(contrasenaAntigua,SDL_GetKeyName(event.key.keysym.sym));
+                                strcat(legacyPassword,SDL_GetKeyName(event.key.keysym.sym));
                             }else{
                                 char ara[20];
                                 strcpy(ara,SDL_GetKeyName(event.key.keysym.sym));
                                 toLowerCase(ara);
-                                strcat(contrasenaAntigua,ara);
+                                strcat(legacyPassword,ara);
                             }
                         }else if (event.key.keysym.sym >= SDLK_0 && event.key.keysym.sym <= SDLK_9  ){
-                                strcat(contrasenaAntigua,SDL_GetKeyName(event.key.keysym.sym));
+                                strcat(legacyPassword,SDL_GetKeyName(event.key.keysym.sym));
                         }else if (event.key.keysym.sym == SDLK_RETURN){
                                 USER root;
-                                RellenarCadena(contrasenaAntigua, 13);
-                                strcpy(taca.password, contrasenaAntigua);
-                                EncryptPassword(&taca);
+                                FillString(legacyPassword, 13);
+                                strcpy(root1.password, legacyPassword);
+                                EncryptPassword(&root1);
                                 binarySearchUserName(" root              ",&root);
-                                if ( ComparePassword(taca.password, root)==0){
-                                    strcpy(contrasenaNuevaLabel,"Entre su nueva contraseña: ");
+                                if ( ComparePassword(root1.password, root)==0){
+                                    strcpy(newPasswordLabel,"Entre su nueva contraseña: ");
                                     writingUser=1;
                                 }else{
                                     strcpy(warnings, "Contrasena incorrecta" );
-                                    crearTexto(renderer , font, white, warnings, 10,80);
+                                    createText(renderer , font, color, warnings, 10,80);
                                     SDL_RenderPresent(renderer);   
                                     SDL_Delay(3000);
                                     flag=0;
@@ -1981,18 +1919,18 @@ void cambiarContraRoot(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white)
                     }else if (writingUser==1){
                         if (event.key.keysym.sym >= SDLK_a && event.key.keysym.sym <= SDLK_z){
                             if (SDL_GetModState() & KMOD_CAPS || SDL_GetModState() & KMOD_SHIFT){
-                                strcat(contrasenaNueva,SDL_GetKeyName(event.key.keysym.sym));
-                                strcat(contrasenaNuevaHidden,"*");
+                                strcat(newPassword,SDL_GetKeyName(event.key.keysym.sym));
+                                strcat(newPasswordHidden,"*");
                             }else{
-                                char ara[20];
-                                strcpy(ara,SDL_GetKeyName(event.key.keysym.sym));
-                                toLowerCase(ara);
-                                strcat(contrasenaNueva,ara);
-                                strcat(contrasenaNuevaHidden,"*");
+                                char stringLikeChar[20];
+                                strcpy(stringLikeChar,SDL_GetKeyName(event.key.keysym.sym));
+                                toLowerCase(stringLikeChar);
+                                strcat(newPassword,stringLikeChar);
+                                strcat(newPasswordHidden,"*");
                             }
                         }else if (event.key.keysym.sym >= SDLK_0 && event.key.keysym.sym <= SDLK_9  ){
-                                strcat(contrasenaNueva,SDL_GetKeyName(event.key.keysym.sym));
-                                strcat(contrasenaNuevaHidden,"*");
+                                strcat(newPassword,SDL_GetKeyName(event.key.keysym.sym));
+                                strcat(newPasswordHidden,"*");
                         }else if (event.key.keysym.sym == SDLK_RETURN){
                             writingUser=2;
                             strcpy(contrasenaConfirmedLabel,"Confirme su contrasena:");
@@ -2004,27 +1942,27 @@ void cambiarContraRoot(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white)
                                 strcat(contrasenaConfirmed,SDL_GetKeyName(event.key.keysym.sym));
                                 strcat(contrasenaConfirmedHidden,"*");
                             }else{
-                                char ara[20];
-                                strcpy(ara,SDL_GetKeyName(event.key.keysym.sym));
-                                toLowerCase(ara);
-                                strcat(contrasenaConfirmed,ara);
+                                char stringLikeChar[20];
+                                strcpy(stringLikeChar,SDL_GetKeyName(event.key.keysym.sym));
+                                toLowerCase(stringLikeChar);
+                                strcat(contrasenaConfirmed,stringLikeChar);
                                 strcat(contrasenaConfirmedHidden,"*");
                             }
                         }else if (event.key.keysym.sym >= SDLK_0 && event.key.keysym.sym <= SDLK_9  ){
                                 strcat(contrasenaConfirmed,SDL_GetKeyName(event.key.keysym.sym));
                                 strcat(contrasenaConfirmedHidden,"*");
                         }else if (event.key.keysym.sym == SDLK_RETURN){
-                            if ( strcmp(contrasenaNueva,contrasenaConfirmed)==0){
-                                RellenarCadena(contrasenaNueva,13);
-                                ChangePassword(" root              ", contrasenaNueva);
-                                strcpy(warnings, contrasenaAntigua );
-                                crearTexto(renderer , font, white, warnings, 10,80);
+                            if ( strcmp(newPassword,contrasenaConfirmed)==0){
+                                FillString(newPassword,13);
+                                ChangePassword(" root              ", newPassword);
+                                strcpy(warnings, legacyPassword );
+                                createText(renderer , font, color, warnings, 10,80);
                                 SDL_RenderPresent(renderer);   
                                 SDL_Delay(3000);
                                 flag=0;
                             }else{
                                     strcpy(warnings, "Contrasenas diferentes" );
-                                    crearTexto(renderer , font, white, warnings, 10,80);
+                                    createText(renderer , font, color, warnings, 10,80);
                                     SDL_RenderPresent(renderer);   
                                     SDL_Delay(3000);
                                     flag=0;
@@ -2037,15 +1975,15 @@ void cambiarContraRoot(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white)
             SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
             SDL_RenderClear(renderer);
 
-            crearTexto(renderer , font, white, title, 10,10);
-            crearTexto(renderer , font, white, subTitle, 15,30);
-            crearTexto(renderer , font, white, indicativo1, 10,50);
-            crearTexto(renderer , font, white, contrasenaAntigua, 180,50);
-            crearTexto(renderer , font, white, contrasenaNuevaLabel, 10,70);
-            crearTexto(renderer , font, white, contrasenaNuevaHidden, 200,70);
-            crearTexto(renderer , font, white, contrasenaConfirmedLabel, 10,90);
-            crearTexto(renderer , font, white, contrasenaConfirmedHidden, 200,90);
-            crearTexto(renderer , font, white, warnings, 10,80);
+            createText(renderer , font, color, title, 10,10);
+            createText(renderer , font, color, subTitle, 15,30);
+            createText(renderer , font, color, Indicative1, 10,50);
+            createText(renderer , font, color, legacyPassword, 180,50);
+            createText(renderer , font, color, newPasswordLabel, 10,70);
+            createText(renderer , font, color, newPasswordHidden, 200,70);
+            createText(renderer , font, color, contrasenaConfirmedLabel, 10,90);
+            createText(renderer , font, color, contrasenaConfirmedHidden, 200,90);
+            createText(renderer , font, color, warnings, 10,80);
 
 
             // Actualizar pantalla
@@ -2054,22 +1992,23 @@ void cambiarContraRoot(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white)
     }
 }
 
-void cambiarContraUser(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white){
+void ChangePasswordUser(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color color){
         char title[40]= "APLICATIVO - GRAFICADORA - UTP";
         char subTitle[60]= "Menu para usuario: root Actualizar contraseña ";
-        char indicativo[40]= "Entre nueva contraseña:";
+        char Indicative[40]= "Entre nueva contraseña:";
         char userNameLabel[40]= "Username:";
         char userName[20]=" ";
         char passWord[13]=" "; 
         char passWordHidded[60]=" ";
         char warnings[32]=" ";
         int userWriting=0;
+        int flag =1;
 
-        while (running) {
+        while (flag ==1) {
             SDL_Event event;
             while (SDL_PollEvent(&event)) {
                 if (event.type == SDL_QUIT ) {
-                    running = 0;
+                    flag = 0;
                 }else if(event.type==SDL_KEYDOWN){
 
                 if ( userWriting==0){
@@ -2077,17 +2016,17 @@ void cambiarContraUser(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white)
                         if (SDL_GetModState() & KMOD_CAPS || SDL_GetModState() & KMOD_SHIFT){
                             strcat(userName,SDL_GetKeyName(event.key.keysym.sym));
                         }else{
-                            char ara[20];
-                            strcpy(ara,SDL_GetKeyName(event.key.keysym.sym));
-                            toLowerCase(ara);
-                            strcat(userName,ara);
+                            char stringLikeChar[20];
+                            strcpy(stringLikeChar,SDL_GetKeyName(event.key.keysym.sym));
+                            toLowerCase(stringLikeChar);
+                            strcat(userName,stringLikeChar);
                         }
                     }else if (event.key.keysym.sym >= SDLK_0 && event.key.keysym.sym <= SDLK_9  ){
                             strcat(userName,SDL_GetKeyName(event.key.keysym.sym));
                     }else if (event.key.keysym.sym == SDLK_RETURN){
-                        USER tin;
-                        RellenarCadena(userName,20);
-                        if ( binarySearchUserName(userName, &tin)!=-1){
+                        USER userFound;
+                        FillString(userName,20);
+                        if ( binarySearchUserName(userName, &userFound)!=-1){
                             strcpy(passWordHidded,"Ingresa nueva contraseña:");
                             userWriting=1;
                         }else{
@@ -2110,10 +2049,10 @@ void cambiarContraUser(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white)
                                 strcat(passWord,SDL_GetKeyName(event.key.keysym.sym));
                                 strcat(passWordHidded,"*");
                         }else if (event.key.keysym.sym == SDLK_RETURN){
-                            USER taca;
-                            RellenarCadena(passWord,13);
-                            strcpy(taca.password,passWord);
-                            EncryptPassword(&taca);
+                            USER userToChangePassword;
+                            FillString(passWord,13);
+                            strcpy(userToChangePassword.password,passWord);
+                            EncryptPassword(&userToChangePassword);
                             strcpy(warnings,passWord);
                             ChangePassword(userName,passWord);
                         }
@@ -2122,13 +2061,13 @@ void cambiarContraUser(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white)
             SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
             SDL_RenderClear(renderer);
 
-            crearTexto(renderer , font, white, title, 10,10);
-            crearTexto(renderer , font, white, subTitle, 15,30);
-            crearTexto(renderer , font, white, userNameLabel, 10,50);
-            crearTexto(renderer , font, white, userName, 80,50);
-            crearTexto(renderer , font, white, passWordHidded, 10,70);
-            crearTexto(renderer , font, white, warnings, 10,90);
-            crearTexto(renderer , font, white, passWord, 10,110);
+            createText(renderer , font, color, title, 10,10);
+            createText(renderer , font, color, subTitle, 15,30);
+            createText(renderer , font, color, userNameLabel, 10,50);
+            createText(renderer , font, color, userName, 80,50);
+            createText(renderer , font, color, passWordHidded, 10,70);
+            createText(renderer , font, color, warnings, 10,90);
+            createText(renderer , font, color, passWord, 10,110);
 
 
             // Actualizar pantalla
@@ -2137,10 +2076,10 @@ void cambiarContraUser(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white)
     }
 }
 
-void borrarUsuario(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white){
+void removeUser(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color color){
         char title[40]= "APLICATIVO - GRAFICADOR - UTP";
         char subTitle[60]= "Menu para usuario: root Borrar usuario";
-        char indicativo[40]= "Entre usuario:";
+        char Indicative[40]= "Entre usuario:";
         char userNameLabel[40]= "Username:";
         char userName[20]=" ";
         char warnings[32]=" ";
@@ -2157,17 +2096,17 @@ void borrarUsuario(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white){
                         if (SDL_GetModState() & KMOD_CAPS || SDL_GetModState() & KMOD_SHIFT){
                             strcat(userName,SDL_GetKeyName(event.key.keysym.sym));
                         }else{
-                            char ara[20];
-                            strcpy(ara,SDL_GetKeyName(event.key.keysym.sym));
-                            toLowerCase(ara);
-                            strcat(userName,ara);
+                            char stringLikeChar[20];
+                            strcpy(stringLikeChar,SDL_GetKeyName(event.key.keysym.sym));
+                            toLowerCase(stringLikeChar);
+                            strcat(userName,stringLikeChar);
                         }
                     }else if (event.key.keysym.sym >= SDLK_0 && event.key.keysym.sym <= SDLK_9  ){
                             strcat(userName,SDL_GetKeyName(event.key.keysym.sym));
                     }else if (event.key.keysym.sym == SDLK_RETURN){
-                            USER taca;
-                            RellenarCadena(userName, 20);
-                            int index = binarySearchUserName(userName, &taca);
+                            USER userToDelete;
+                            FillString(userName, 20);
+                            int index = binarySearchUserName(userName, &userToDelete);
                             if ( index == -1){
                                 strcpy(warnings, "no existe");
                             }else{
@@ -2184,11 +2123,11 @@ void borrarUsuario(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white){
             SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
             SDL_RenderClear(renderer);
 
-            crearTexto(renderer , font, white, title, 10,10);
-            crearTexto(renderer , font, white, subTitle, 15,30);
-            crearTexto(renderer , font, white, userNameLabel, 10,50);
-            crearTexto(renderer , font, white, userName, 80,50);
-            crearTexto(renderer , font, white, warnings, 10,70);
+            createText(renderer , font, color, title, 10,10);
+            createText(renderer , font, color, subTitle, 15,30);
+            createText(renderer , font, color, userNameLabel, 10,50);
+            createText(renderer , font, color, userName, 80,50);
+            createText(renderer , font, color, warnings, 10,70);
 
 
             // Actualizar pantalla
@@ -2197,7 +2136,7 @@ void borrarUsuario(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white){
     }
 }
 
-void ListarAccesosDeUsarios(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white){
+void ListUsers(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color color){
     bool quit = false;
     int scrollOffset = 20;
     char title[]= "Aplicativo -- Graficador -- UTP";
@@ -2218,23 +2157,23 @@ void ListarAccesosDeUsarios(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color w
                         if (SDL_GetModState() & KMOD_CAPS || SDL_GetModState() & KMOD_SHIFT){
                             strcat(userName,SDL_GetKeyName(event.key.keysym.sym));
                         }else{
-                            char ara[20];
-                            strcpy(ara,SDL_GetKeyName(event.key.keysym.sym));
-                            toLowerCase(ara);
-                            strcat(userName,ara);
+                            char stringLikeChar[20];
+                            strcpy(stringLikeChar,SDL_GetKeyName(event.key.keysym.sym));
+                            toLowerCase(stringLikeChar);
+                            strcat(userName,stringLikeChar);
                         }
                     }else if (event.key.keysym.sym >= SDLK_0 && event.key.keysym.sym <= SDLK_9  ){
                             strcat(userName,SDL_GetKeyName(event.key.keysym.sym));
                     }else if (event.key.keysym.sym == SDLK_RETURN){
-                        USER tina;
-                        RellenarCadena(userName,20);
-                        int index =binarySearchUserName(userName, &tina);
+                        USER userFound;
+                        FillString(userName,20);
+                        int index =binarySearchUserName(userName, &userFound);
                         if (index !=-1){
                             tin=false;
                         }else{
                             quit=true;
                             tin=false;   
-                                    crearTexto(renderer , font, white, "Este usuario no existe", 10,80);
+                                    createText(renderer , font, color, "Este usuario no existe", 10,80);
                                     SDL_RenderPresent(renderer);   
                                     SDL_Delay(3000);       
                         }
@@ -2244,10 +2183,10 @@ void ListarAccesosDeUsarios(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color w
 
             SDL_RenderClear(renderer);
 
-            crearTexto(renderer , font, white, title, 10,10);
-            crearTexto(renderer , font, white, subtitle, 15,30);
-            crearTexto(renderer , font, white, userNameLabel, 10,50);
-            crearTexto(renderer , font, white, userName, 120,50);
+            createText(renderer , font, color, title, 10,10);
+            createText(renderer , font, color, subtitle, 15,30);
+            createText(renderer , font, color, userNameLabel, 10,50);
+            createText(renderer , font, color, userName, 120,50);
 
 
             // Actualizar pantalla
@@ -2288,40 +2227,36 @@ void ListarAccesosDeUsarios(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color w
             int y = 20 - scrollOffset; // Aplicar el desplazamiento vertical
             if (y > 0) y = 0; // Asegurar que no se desplace más allá del inicio
             
-            crearTexto(renderer ,font,white,title, 20, y);y+=20;
-            crearTexto(renderer ,font,white,subtitle, 20, y);y+=20;
-            crearTexto(renderer ,font,white,userNameLabel, 20, y);y+=20;
-            crearTexto(renderer ,font,white,titleData, 20, y);y+=20;
+            createText(renderer ,font,color,title, 20, y);y+=20;
+            createText(renderer ,font,color,subtitle, 20, y);y+=20;
+            createText(renderer ,font,color,userNameLabel, 20, y);y+=20;
+            createText(renderer ,font,color,titleData, 20, y);y+=20;
 
             // Imprimir la tabla
             for (int i = 0; i < k; i++) {
                 char texto[80];
                 sprintf(texto, "%s    |     %s     |   %s", vector[i].date,vector[i].graphicKey, vector[i].function);
-                crearTexto(renderer ,font,white,texto, 20, y);y+=20;
-                crearTexto(renderer ,font,white,"-------------------------------------", 20, y);
+                createText(renderer ,font,color,texto, 20, y);y+=20;
+                createText(renderer ,font,color,"-------------------------------------", 20, y);
                 y += 20; // Ajusta la posición horizontal para la próxima celda
             }
 
             SDL_RenderPresent(renderer);
         }
     }else if (quit!=true){
-        crearTexto(renderer , font, white, "Este usuario no tiene graficas", 10,80);
+        createText(renderer , font, color, "Este usuario no tiene graficas", 10,80);
         SDL_RenderPresent(renderer);   
         SDL_Delay(3000);
     }
-
-
-
-
 }
 
-void ListarUsarios(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white){
-    bool quit = false;
+void ListAllUsers(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color color){
+    bool quit = false; // variable que mantiene el bucle de esta funcion
     int scrollOffset = 20;
     char title[]= "Aplicativo -- Graficador -- UTP";
     char subtitle[]= "Listadodo de accesos todos los usuarios";
     char titleData[]="Fecha             Nro grafico    Polinomio f(x)";
-    int cantidadDeUsuarios= GetUserKey();
+    int cantidadDeUsuarios= GetUserKey(); // mira cuantos usuarios activos hay en la base
 
     if (cantidadDeUsuarios>1){
         USER todoslosUsuarios[cantidadDeUsuarios];
@@ -2354,8 +2289,8 @@ void ListarUsarios(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white){
             int y = 20 - scrollOffset; // Aplicar el desplazamiento vertical
             if (y > 0) y = 0; // Asegurar que no se desplace más allá del inicio
             
-            crearTexto(renderer ,font,white,title, 20, y);y+=20;
-            crearTexto(renderer ,font,white,subtitle, 20, y);y+=20;
+            createText(renderer ,font,color,title, 20, y);y+=20;
+            createText(renderer ,font,color,subtitle, 20, y);y+=20;
 
             // Imprimir la tabla
             for (int i = 0; i < cantidadDeUsuarios; i++) {
@@ -2366,129 +2301,130 @@ void ListarUsarios(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white){
                         GRAPHICS vector[ k ];
                         char userNameLabel[40]="Username:";strcat(userNameLabel,texto);
                         GetUserGraphicsVector ( texto, vector );
-                        crearTexto(renderer ,font,white, userNameLabel, 20, y);y+=20;
-                        crearTexto(renderer ,font,white,titleData, 20, y);y+=20;
+                        createText(renderer ,font,color, userNameLabel, 20, y);y+=20;
+                        createText(renderer ,font,color,titleData, 20, y);y+=20;
                         for (int i = 0; i < k; i++) {
-                            char movistar[80];
-                            sprintf(movistar, "%s    |     %s     |   %s", vector[i].date,vector[i].graphicKey, vector[i].function);
-                            crearTexto(renderer ,font,white,movistar, 20, y);
+                            char dataToPrint[80];
+                            sprintf(dataToPrint, "%s    |     %s     |   %s", vector[i].date,vector[i].graphicKey, vector[i].function);
+                            createText(renderer ,font,color,dataToPrint, 20, y);
                             y += 20; // Ajusta la posición horizontal para la próxima celda
                         }
-                        crearTexto(renderer ,font,white,"-------------------------------------------------", 20, y);
+                        createText(renderer ,font,color,"-------------------------------------------------", 20, y);
                         y += 20; // Ajusta la posición horizontal para la próxima celda
                     }
                 }
             }
-            crearTexto(renderer , font, white, "ESTA ES TODA LA LISTA, SI NO VE NADA ES PORQUE NO SE HAN CREADO GRAFICAS", 10,y);
+            createText(renderer , font, color, "ESTA ES TODA LA LISTA, SI NO VE NADA ES PORQUE NO SE HAN CREADO GRAFICAS", 10,y);
 
             SDL_RenderPresent(renderer);
         }
 
     }else{
         SDL_RenderClear(renderer);
-        crearTexto(renderer , font, white, "Aun no hay usarios creados", 10,80);
+        createText(renderer , font, color, "Aun no hay usarios creados", 10,80);
         SDL_RenderPresent(renderer);   
         SDL_Delay(3000);
     }   
-
-
-
 }
 
 
-void graficoPorReferencia(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white,char name[]){
+void GraphicByReference(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color color,char name[]){
     char title[70]= "APLICATIVO - GRAFICADOR - UTP -impresion de grafica por referencia";
     char subTitle[60]= "Crear Grafico";
-    char indicativo[80]= "C = Coeficiente , E = exponente , entre termino en formato CXE de tenerlos";
-    char indicativo2[80]= "Rango en formato Inicio,final ejem: -10,15 ";
-    char indicativoReferecia[40]= "Entre Nro(referencia):";
+    char Indicative[80]= "C = Coeficiente , E = exponente , entre termino en formato CXE de tenerlos";
+    char Indicative2[80]= "Rango en formato Inicio,final ejem: -10,15 ";
+    char IndicativeReferecia[40]= "Entre Nro(referencia):";
     char referencia[30]=  " ";
-    char indicativoNombre[40]= "Username: ";
+    char IndicativeNombre[40]= "Username: ";
     char nombre[20]=" ";
-    char indicativoFecha[40]= "Date=";
-    char fecha[40]= " ";
+    char IndicativeFecha[40]= "Date=";
+    char date[40]= " ";
     int userWriting=0;
 
-    int running1=1;
+    int flag=1;
 
     GRAPHICS funcionAGraficar;
 
 
-    while (running1) {
+    while (flag) {
         SDL_Event event;
             while (SDL_PollEvent(&event)) {
-                if (event.type == SDL_QUIT ) {
-                    running = 0;
-                }else if(event.type==SDL_KEYDOWN){
+                    if (event.type == SDL_QUIT ) {
+                        flag = 0;
+                    }else if(event.type==SDL_KEYDOWN){
 
-                if ( userWriting==0){
-                    if (event.key.keysym.sym == SDLK_x || event.key.keysym.sym == SDLK_PLUS || event.key.keysym.sym == SDLK_MINUS){
-                        if (SDL_GetModState() & KMOD_CAPS || SDL_GetModState() & KMOD_SHIFT){
-                            strcat(referencia,SDL_GetKeyName(event.key.keysym.sym));
-                        }else{
-                            char ara[20];
-                            strcpy(ara,SDL_GetKeyName(event.key.keysym.sym));
-                            toLowerCase(ara);
-                            strcat(referencia,ara);
+                    if ( userWriting==0){
+                        if (event.key.keysym.sym == SDLK_x || event.key.keysym.sym == SDLK_PLUS || event.key.keysym.sym == SDLK_MINUS){
+                            if (SDL_GetModState() & KMOD_CAPS || SDL_GetModState() & KMOD_SHIFT){
+                                strcat(referencia,SDL_GetKeyName(event.key.keysym.sym));
+                            }else{
+                                char ara[20];
+                                strcpy(ara,SDL_GetKeyName(event.key.keysym.sym));
+                                toLowerCase(ara);
+                                strcat(referencia,ara);
+                            }
+                        }else if (event.key.keysym.sym >= SDLK_0 && event.key.keysym.sym <= SDLK_9  ){
+                                strcat(referencia,SDL_GetKeyName(event.key.keysym.sym));
+                        }else if (event.key.keysym.sym == SDLK_RETURN){
+                            char nroRefencia[5]; sprintf(nroRefencia, "%04d", atoi(referencia));
+                            BinarySearchGraphicKey(nroRefencia,&funcionAGraficar);
+                            flag=0;
                         }
-                    }else if (event.key.keysym.sym >= SDLK_0 && event.key.keysym.sym <= SDLK_9  ){
-                            strcat(referencia,SDL_GetKeyName(event.key.keysym.sym));
-                    }else if (event.key.keysym.sym == SDLK_RETURN){
-                        char nroRefencia[5]; sprintf(nroRefencia, "%04d", atoi(referencia));
-                        BinarySearchGraphicKey(nroRefencia,&funcionAGraficar);
-                        running1=0;
+                        }
                     }
-                    }
-                }
-        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-        SDL_RenderClear(renderer);
+            SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+            SDL_RenderClear(renderer);
 
-        crearTexto(renderer , font, white, title, 10,10);
-        crearTexto(renderer , font, white, subTitle, 15,30);
-        crearTexto(renderer , font, white, indicativo, 10,50);
-        crearTexto(renderer , font, white, indicativo2, 10,70);
-        crearTexto(renderer , font, white, indicativoReferecia, 10,90);
-        crearTexto(renderer , font, white, referencia, 150,90);
+            createText(renderer , font, color, title, 10,10);
+            createText(renderer , font, color, subTitle, 15,30);
+            createText(renderer , font, color, Indicative, 10,50);
+            createText(renderer , font, color, Indicative2, 10,70);
+            createText(renderer , font, color, IndicativeReferecia, 10,90);
+            createText(renderer , font, color, referencia, 150,90);
 
-        // Actualizar pantalla
-        SDL_RenderPresent(renderer);
-        
+            // Actualizar pantalla
+            SDL_RenderPresent(renderer);
+            
+        }
     }
+
+    if ( ( strcmp(funcionAGraficar.userName, name)==0 || strcmp(" root              ", name)==0 ) && funcionAGraficar.userName[0] != '!' ){
+        char rango[20];sprintf(rango, "%i,%i", funcionAGraficar.lowerBound,funcionAGraficar.upperBound);
+        createText(renderer , font, color, IndicativeFecha, 350,90);
+        createText(renderer , font, color, IndicativeNombre, 210,90);
+        createText(renderer , font, color, funcionAGraficar.userName, 280,90);
+        createText(renderer , font, color, funcionAGraficar.date, 390,90);
+        createText(renderer , font, color, "Funcion:", 10,105);
+        createText(renderer , font, color, funcionAGraficar.function, 70,105);
+        createText(renderer , font, color, "Rango", 210,105);
+        createText(renderer , font, color, rango, 280,105);
+        createText(renderer , font, color, "Incremento:", 350,105);
+        char incrimente[5];sprintf(incrimente,"%i",funcionAGraficar.increment);
+        createText(renderer , font, color, incrimente, 430,105);
+        GraphFunction(renderer, font, funcionAGraficar.function,funcionAGraficar.lowerBound,funcionAGraficar.upperBound,funcionAGraficar.increment);
+
+        int flag2=1;
+        while (flag2==1) {
+                    SDL_Event event;
+                    while (SDL_PollEvent(&event)) {
+                        if (event.type == SDL_QUIT || event.key.keysym.sym== SDLK_RETURN) {
+                            flag2 = 0;
+                        }
+                    }
+        }
+    }
+
+
 }
 
-if ( strcmp(funcionAGraficar.userName, name)==0 || strcmp(" root              ", name)==0 ){
-    char rango[20];sprintf(rango, "%i,%i", funcionAGraficar.lowerBound,funcionAGraficar.upperBound);
-    crearTexto(renderer , font, white, indicativoFecha, 350,90);
-    crearTexto(renderer , font, white, indicativoNombre, 210,90);
-    crearTexto(renderer , font, white, funcionAGraficar.userName, 280,90);
-    crearTexto(renderer , font, white, funcionAGraficar.date, 390,90);
-    crearTexto(renderer , font, white, "Funcion:", 10,105);
-    crearTexto(renderer , font, white, funcionAGraficar.function, 70,105);
-    crearTexto(renderer , font, white, "Rango", 210,105);
-    crearTexto(renderer , font, white, rango, 280,105);
-    crearTexto(renderer , font, white, "Incremento:", 350,105);
-    char incremento[5];sprintf(incremento,"%i",funcionAGraficar.increment);
-    crearTexto(renderer , font, white, incremento, 430,105);
-    GraphFunction(renderer, font, funcionAGraficar.function,funcionAGraficar.lowerBound,funcionAGraficar.upperBound,funcionAGraficar.increment);
-while (running) {
-            SDL_Event event;
-            while (SDL_PollEvent(&event)) {
-                if (event.type == SDL_QUIT ) {
-                    running = 0;
-                }
-            }
-}
-}
-
-
-}
-
-void MisGraficas(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white, char name[]){
+void myGraphics(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color color, char name[]){
     bool quit = false;
     int scrollOffset = 20;
-    char title[]= "Aplicativo -- Graficador -- UTP";
-    char subtitle[70]= "Listados de graficos creados por el usuario (tu):";strcat(subtitle,name);
-    char titleData[]="Fecha             Nro grafico    Polinomio f(x)";
+    char title[]= "Aplicativo -- Graficadora -- UTP";
+    char subtitle[70]= "Modulo listar accesos - Usuario:";strcat(subtitle,name);
+    char sort[] = "Ordenar por date. Presione(1) Orden ascendente (2) Orden Descendente: ";//texto que muestra la eleccion de ordenamiento
+    char option = '\0';//almacenara la opcion que ingreso el usuario para ordenar el listado y como estado de si ya ingreso la opcion o no
+    char titleData[]="Fecha             Nro grafico    Ecuacion-F(x)";
     char warnings[40]=" ";
 
     int k = GetQuantityUserGraphics ( name );
@@ -2500,7 +2436,7 @@ void MisGraficas(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white, char 
         while (!quit) {
             SDL_Event event;
             while (SDL_PollEvent(&event) ) {
-                if (event.type == SDL_QUIT || event.key.keysym.sym == SDLK_RETURN) {
+                if (event.key.keysym.sym == SDLK_RETURN) {
                     quit = true;
                 } else if (event.type == SDL_MOUSEWHEEL) {
                     if (event.wheel.y > 0) {
@@ -2513,6 +2449,9 @@ void MisGraficas(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white, char 
                         // Scroll down
                         scrollOffset += 20;
                     }
+                } else if (event.key.keysym.sym >= SDLK_1 && event.key.keysym.sym <= SDLK_2 && option == '\0'  ){ // si he presioando un numero entre 1 y 2
+                    option = event.key.keysym.sym;
+                    strcat(sort,SDL_GetKeyName(event.key.keysym.sym)); // lo agramaos a sort
                 }
             }
 
@@ -2522,20 +2461,32 @@ void MisGraficas(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white, char 
             int y = 20 - scrollOffset; // Aplicar el desplazamiento vertical
             if (y > 0) y = 0; // Asegurar que no se desplace más allá del inicio
             
-            crearTexto(renderer ,font,white,title, 20, y);y+=20;
-            crearTexto(renderer ,font,white,subtitle, 20, y);y+=20;
-            crearTexto(renderer ,font,white,titleData, 20, y);y+=20;
-            crearTexto(renderer ,font,white,warnings, 20, y);y+=20;
+            createText(renderer ,font,color,title, 20, y);y+=20;
+            createText(renderer ,font,color,subtitle, 20, y);y+=20;
+            createText(renderer ,font,color,sort, 20, y);y+=20;
+            createText(renderer ,font,color,warnings, 20, y);y+=20;
             
             if ( k ==-1 ){
                 strcpy(warnings, "Este usuario aun no ha creado graficas");
             }else{
-                for (int i = 0; i < k; i++) {
-                    char texto[80];
-                    sprintf(texto, "%s    |     %s     |   %s", vector[i].date,vector[i].graphicKey, vector[i].function);
-                    crearTexto(renderer ,font,white,texto, 20, y);y+=20;
-                    crearTexto(renderer ,font,white,"-------------------------------------", 20, y);
-                    y += 20; // Ajusta la posición horizontal para la próxima celda
+                if ( option == '1' ) {
+                    createText(renderer ,font,color,titleData, 20, y);y+=20;
+                    for (int i = 0; i < k; i++) {
+                        char texto[80];
+                        sprintf(texto, "%s    |     %s     |   %s", vector[i].date,vector[i].graphicKey, vector[i].function);
+                        createText(renderer ,font,color,texto, 20, y);y+=20;
+                        createText(renderer ,font,color,"-------------------------------------", 20, y);
+                        y += 20; // Ajusta la posición horizontal para la próxima celda
+                    }
+                } else if ( option == '2' ) {
+                    createText(renderer ,font,color,titleData, 20, y);y+=20;
+                    for (int i = k - 1; i >= 0; i--) {
+                        char texto[80];
+                        sprintf(texto, "%s    |     %s     |   %s", vector[i].date,vector[i].graphicKey, vector[i].function);
+                        createText(renderer ,font,color,texto, 20, y);y+=20;
+                        createText(renderer ,font,color,"-------------------------------------", 20, y);
+                        y += 20; // Ajusta la posición horizontal para la próxima celda
+                    }
                 }
             }
 
@@ -2557,7 +2508,7 @@ void MisGraficas(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white, char 
             SDL_RenderClear(renderer);
 
             // Imprimir la tabla
-            crearTexto(renderer ,font,white,"AUN NO TIENES GRAFICAS", 20, 20);
+            createText(renderer ,font,color,"AUN NO TIENES GRAFICAS", 20, 20);
 
             SDL_RenderPresent(renderer);
         }
@@ -2565,13 +2516,13 @@ void MisGraficas(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white, char 
 }
 
 
-void borrarGrafica(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white, char name[]){
-        char title[40]= "APLICATIVO - GRAFICADOR - UTP";
-        char subTitle[60]= "Menu borrar grafico para usuario:";strcat(subTitle,name);
-        char indicativo[40]= "Entre nroGrafica:";
-        char nroGrafica[20]=" ";
-        char warnings[40]=" ";
-        int flag=1;
+void removeGraphic(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color color, char name[]){
+        char title[40]= "APLICATIVO - GRAFICADOR - UTP"; //diseño de pantalla
+        char subTitle[60]= "Menu borrar grafico para usuario:";strcat(subTitle,name); // desiseño de pantalla le agregamos el nombre del usuario actual
+        char Indicative[40]= "Entre nroGrafica:";
+        char nroGrafica[20]=" "; // variable que guarda el numero de de la grafica que se quiere imprimir
+        char warnings[40]=" "; // variable que contendrá la adventencias que se deban hacer
+        int flag=1; // variable encargada del bucle principal de este modulo
 
         while (flag) {
             SDL_Event event;
@@ -2585,13 +2536,14 @@ void borrarGrafica(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white, cha
                     }else if (event.key.keysym.sym == SDLK_BACKSPACE){
                         DelateLastChar(nroGrafica);
                     }else if (event.key.keysym.sym == SDLK_RETURN){
-                        char nroRefencia[5]; sprintf(nroRefencia, "%04d", atoi(nroGrafica));
-                        int status = DeleteGraphic(name,nroRefencia);
-                        if (status == -2){
+                        char nroRefencia[5]; sprintf(nroRefencia, "%04d", atoi(nroGrafica)); //nroReferencia guarda el numero que se ha ingresado en formato xxxx
+                        int status = DeleteGraphic(name,nroRefencia); // status busca la grafica y guarda el estado para la variable que se busca
+                        if (status == -2){ // si el estatus es -2 entonces la grafica no existe
                             strcpy(warnings,"La grafica que deseas borrar no existe");
-                        }else if ( status == -1){
+                        }else if ( status == -1){ // si el estatus es -1 , la grafica existe pero no es del usuario que la quiere imprimir
                             strcpy(warnings , "Este grafico no te pertenece");
-                        }else{
+                        }else{ 
+                            
                             strcpy(warnings, "Se ha borrado el grafico con exito");
                         }
                     }
@@ -2600,11 +2552,11 @@ void borrarGrafica(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white, cha
             SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
             SDL_RenderClear(renderer);
 
-            crearTexto(renderer , font, white, title, 10,10);
-            crearTexto(renderer , font, white, indicativo, 15,50);
-            crearTexto(renderer , font, white, nroGrafica, 130,50);
-            crearTexto(renderer , font, white, subTitle, 15,30);
-            crearTexto(renderer , font, white, warnings, 10,70);
+            createText(renderer , font, color, title, 10,10);
+            createText(renderer , font, color, Indicative, 15,50);
+            createText(renderer , font, color, nroGrafica, 130,50);
+            createText(renderer , font, color, subTitle, 15,30);
+            createText(renderer , font, color, warnings, 10,70);
 
 
             // Actualizar pantalla
@@ -2613,53 +2565,52 @@ void borrarGrafica(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white, cha
     }
 }
 
-void modulo2User(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white, char nombreUsario[]) {
+void modulo2User(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color color, char nombreUsario[]) { //menu que sera presentado a un usario deferente a root
+    //diseño de pantalla {
     char title[40]= "APLICATIVO - GRAFICADOR - UTP";
-    char subTitle[60]= "Menu principal para usuario: ";strcat(subTitle, nombreUsario);
+    char subTitle[60]= "Menu principal para usuario: ";strcat(subTitle, nombreUsario); // le agregamos a este texto el nombre del usuario actual
     char option0[40]= "0. Salir del aplicativo";
     char option1[40]= "1. Crear nuevo grafico";
     char option2[40]= "2. Borrar un grafico existente";
     char option3[40]= "3. Listar accesos";
     char option4[40]= "4. Imprimir grafico por referencia";
-    char option5[60]= "5. Cambiar password del usuario:";strcat(option5, nombreUsario);
-
-    while (running) {
+    char option5[60]= "5. Cambiar password del usuario:";strcat(option5, nombreUsario);//}  le agregamos a este texto el nombre del usuario actual
+    int flag =1;
+    while (flag==1) {
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
-            if (event.type == SDL_QUIT ) {
-                running = 0;
-            }else if(event.type==SDL_KEYDOWN){
+            if(event.type==SDL_KEYDOWN){
                 switch(event.key.keysym.sym ){
                     case SDLK_0:
-                                running=0;break;
+                                flag=0;break;
                     case SDLK_1:
-                        crearGrafico(renderer, font, white,nombreUsario);
+                        CreateGraphic(renderer, font, color,nombreUsario);
                         break;
                     case SDLK_2:
-                        borrarGrafica(renderer, font, white,nombreUsario); //borrar grafica
+                        removeGraphic(renderer, font, color,nombreUsario);
                         break;
                     case SDLK_3:
-                        MisGraficas(renderer, font, white,nombreUsario);
+                        myGraphics(renderer, font, color,nombreUsario);
                         break;
                     case SDLK_4:
-                        graficoPorReferencia(renderer, font, white,nombreUsario);
+                        GraphicByReference(renderer, font, color,nombreUsario);
                         break;
                     case SDLK_5:
-                        cambiarMiContrasena(renderer, font, white, nombreUsario);
+                        ChangeMyPassword(renderer, font, color, nombreUsario);
                         break;
                 }
             }
         SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
         SDL_RenderClear(renderer);
 
-        crearTexto(renderer , font, white, title, 10,10);
-        crearTexto(renderer , font, white, subTitle, 15,30);
-        crearTexto(renderer , font, white, option0, 10,50);
-        crearTexto(renderer , font, white, option1, 10,70);
-        crearTexto(renderer , font, white, option2, 10,90);
-        crearTexto(renderer , font, white, option3, 10,110);
-        crearTexto(renderer , font, white, option4, 10,130);
-        crearTexto(renderer , font, white, option5, 10,150);
+        createText(renderer , font, color, title, 10,10);
+        createText(renderer , font, color, subTitle, 15,30);
+        createText(renderer , font, color, option0, 10,50);
+        createText(renderer , font, color, option1, 10,70);
+        createText(renderer , font, color, option2, 10,90);
+        createText(renderer , font, color, option3, 10,110);
+        createText(renderer , font, color, option4, 10,130);
+        createText(renderer , font, color, option5, 10,150);
 
         // Actualizar pantalla
         SDL_RenderPresent(renderer);
@@ -2668,9 +2619,9 @@ void modulo2User(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white, char 
 }
 
 //
-void RootModule(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white) {
-    char title[40]= "APLICATIVO - GRAFICADOR - UTP";
-    char subTitle[40]= "Menu principal para usuario: root";
+void RootModule(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color color) {
+    char title[40]= "APLICATIVO - GRAFICADOR - UTP"; // Estas son las opciones que se le presentaran
+    char subTitle[40]= "Menu principal para usuario: root"; // al usuario root
     char option0[40]= "0. Salir del aplicativo";
     char option1[40]= "1. Crear usuario";
     char option2[40]= "2. Borrar usuario";
@@ -2680,7 +2631,7 @@ void RootModule(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white) {
     char option6[40]= "6. Cambiar password del usuario: root";
     char option7[40]= "7. cambiar password de un usuario";
 
-    int flag=1; 
+    int flag=1; // varible que mantiene la aplicacion es este modulo
     while (flag) {
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
@@ -2691,25 +2642,25 @@ void RootModule(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white) {
                     case SDLK_0:
                                 flag=0;break;
                     case SDLK_1:
-                        moduloCrearUsuario(renderer, font, white);
+                        CreateUser(renderer, font, color);
                         break;
                     case SDLK_2:
-                        borrarUsuario(renderer, font, white);
+                        removeUser(renderer, font, color);
                         break;
                     case SDLK_3:
-                        ListarAccesosDeUsarios(renderer, font, white);
+                        ListUsers(renderer, font, color);
                         break;
                     case SDLK_4:
-                        ListarUsarios(renderer, font, white);
+                        ListAllUsers(renderer, font, color);
                         break;
                     case SDLK_5:
-                        graficoPorReferencia(renderer, font, white," root              ");
+                        GraphicByReference(renderer, font, color," root              ");
                         break;
                     case SDLK_6:
-                        cambiarContraRoot(renderer, font, white);
+                        cambiarContraRoot(renderer, font, color);
                         break;
                     case SDLK_7:
-                        cambiarContraUser(renderer, font, white);
+                        ChangePasswordUser(renderer, font, color);
                         break;
 
                 }
@@ -2717,16 +2668,16 @@ void RootModule(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white) {
         SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
         SDL_RenderClear(renderer);
 
-        crearTexto(renderer , font, white, title, 10,10);
-        crearTexto(renderer , font, white, subTitle, 15,30);
-        crearTexto(renderer , font, white, option0, 10,50);
-        crearTexto(renderer , font, white, option1, 10,70);
-        crearTexto(renderer , font, white, option2, 10,90);
-        crearTexto(renderer , font, white, option3, 10,110);
-        crearTexto(renderer , font, white, option4, 10,130);
-        crearTexto(renderer , font, white, option5, 10,150);
-        crearTexto(renderer , font, white, option6, 10,170);
-        crearTexto(renderer , font, white, option7, 10,190);
+        createText(renderer , font, color, title, 10,10);
+        createText(renderer , font, color, subTitle, 15,30);
+        createText(renderer , font, color, option0, 10,50);
+        createText(renderer , font, color, option1, 10,70);
+        createText(renderer , font, color, option2, 10,90);
+        createText(renderer , font, color, option3, 10,110);
+        createText(renderer , font, color, option4, 10,130);
+        createText(renderer , font, color, option5, 10,150);
+        createText(renderer , font, color, option6, 10,170);
+        createText(renderer , font, color, option7, 10,190);
 
         // Actualizar pantalla
         SDL_RenderPresent(renderer);
@@ -2739,29 +2690,31 @@ void RootModule(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white) {
 
 
 // recibe pantalla donde se renderizara , fuente con la que se hara y color del texto
-void LogIn(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white){ // Este mudulo es el prin
+void LogIn(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color color){ // Este mudulo es el prin
     // Para este programa se ha decidido que los string se inicializaran con " "
     char userName[20] = " ";  // Es el el string que guarda el nombre de usuario que se entre
     char passHidded[30]=" "; // Es la contraseña enmascarada  (ejemplo: ****)
     char passWord[13]=" ";  // Es la contraseña sin enmascarar (ejemplo: hola)
     int  writingUser=0;    // Esta varible permite identificar que campo se esta escribiendo siendo { 0 = userName , 1 = password }
-    char warnings[70]="AQUI PONDRE LA CONRASEÑA QUE DEBE PONER:"; // Variable para poner advertencias o indicativos que se le deban dar al usuario
+    char warnings[70]=" "; // Variable para poner advertencias o Indicatives que se le deban dar al usuario
     char titleOfModule[50] = "Aplicativo - Graficadora - UTP"; // titulo que se le pone al modulo
-    char userNameLabel[20]="Username: "; // indicativo de lo que se debe escribir es el nombre de usuario
+    char userNameLabel[20]="Username: "; // Indicative de lo que se debe escribir es el nombre de usuario
     int exitApp=0; //necesita habilitar para que cuando se presione cualquier tecla se finalice el programa
     int exitAppAuxiliar=0; // Es la variable encargada de habilitar exitApp a 1 (podria ser cualquier numero mayor a 0)
-    char warnings2[70]="AQUI PONDRE LA CONTRASEÑA QUE EL USARIO INGRESA: ";
+    char warnings2[70]=" ";
     char usuarioparamodulo2[20]=" "; // Esta variable sera enviada solo para UserModule , sirve de auxiliar para enviar el nombre del usuario que se ha loggueado
-    int vecesIntentadas=0; // lleva el contador de las veces que se introduce una contraseña incorrectamente
-
-    //while (running) mantiene actualizando el modulo actual , esto para que el usuario pueda ver lo que va escribiendo 
-    while (running && vecesIntentadas!=3) {
+    int timesTried=0; // lleva el contador de las veces que se introduce una contraseña incorrectamente
+    int flag =1 ;
+    
+     
+    //while (flag) mantiene actualizando el modulo actual , esto para que el usuario pueda ver lo que va escribiendo 
+    while (flag ==1 && timesTried!=3) {
 
         SDL_Event event; // event es una variable tipo evento , estas variables guardan lo que ha sucedido en el aplicativo
         // while (SDL_PollEvent(&event)) , ira mirando cada uno de los eventos que esten guardados en event
         while (SDL_PollEvent(&event)) {  //lee todos los eventos que han ocurrido
             if (event.type == SDL_QUIT || exitApp) { // si se debe finalizar el programa
-                running = 0;
+                flag = 0;
             }
 //--------------------------------- Code Optimizado ----------------------------------------------------------
             if(event.type==SDL_KEYDOWN){ // lee solo cuando la tecla fue presionada , no si se esta presionando
@@ -2785,7 +2738,7 @@ void LogIn(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white){ // Este mu
                             DelateLastChar(userName);
                     }else if (event.key.keysym.sym == SDLK_RETURN){ // cuando el usuario presione enter
                         if (GetUserKey() == 0){ // esto indica qu es la primera vez que se ejecuta el programa, por ende se tratará de manera distinta
-                            if ( strcmp(userName , " root")==0){ // la primera vez si o si se debe creear el usuario root , aqui verificamos eso
+                            if ( strcmp(userName , " root")==0){ // la primera vez si o si se debe creear el usuario root , verificamos eso
                                 strcpy(passHidded, "Password: "); // habilitamos el campo para Password
                                 strcpy(warnings, " "); // y limpiamos advertencias de haberlas
                                 writingUser= 1; // ajustamos writingUSer a uno (lo que signigica que ahora se escribira la contraseña)
@@ -2796,14 +2749,13 @@ void LogIn(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white){ // Este mu
                             }
                         }else{ // de lo contrario el usuario root ya existe , es decir no es la primera vez iniciado el programa
                             USER userFound; // guardará el usuario al que el usuario actual quiere acceder
-                            RellenarCadena(userName,20);        
+                            FillString(userName,20);        
                             int index = binarySearchUserName(userName,&userFound); 
                             if ( index ==-1){ // si el usuario no existe
                                 strcpy(warnings, "USUARIO NO EXISTENTE");
                                 sprintf(warnings2, "%i", index);
                             }else{ // si el usuario existe entonces
                                 strcpy(passHidded, "Password: "); // habiliamos el campo para la contraseña
-                                strcpy(warnings,  userFound.password); // ignorar esto 
                                 writingUser= 1;  // habilitamos al usario para que escriba ahora la contraseña
                             }
                         }
@@ -2831,24 +2783,24 @@ void LogIn(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white){ // Este mu
                         if ( GetUserKey()==0){ // si es la primera vez que se ejecuta el programa debemos verificar que la contraseña sea mayos de 4 caracteres
                             if (strlen(passWord) >=5){ // aqui hacemos esa verificacion
                                 USER root; // creamos el usuario que agregaremos a la base 
-                                RellenarCadena(userName,20);
-                                RellenarCadena(passWord,13);
+                                FillString(userName,20);
+                                FillString(passWord,13);
                                 strcpy ( root.userName, userName );
                                 strcpy ( root.password, passWord );
                                 // le asignos a root el userkey 0 (es el primero) | encriptamos su contraseña | lo añadimos a la base
                                 root.userKey = 0; EncryptPassword( &root ); AddUserToFile ( root );
-                                RootModule(renderer,font,white); // se ha creado correctamente el usario, por ende lo mandamos a la pantalla de rood
+                                RootModule(renderer,font,color); // se ha creado correctamente el usario, por ende lo mandamos a la pantalla de rood
                             }else{// si el usuario ha entrado correctamente el userName (la primera vez debe ser root) pero no ingresa una contraseña adecuada
                                 strcpy(passWord," "); // borramos todo lo ya hecho
                                 strcpy(passHidded," ");
                                 strcpy(userName," ");//--------
-                                vecesIntentadas++; // aumentamos las veces intentadas a 1 
+                                timesTried++; // aumentamos las veces intentadas a 1 
                                 writingUser=0; // y le decimos que vuelva a ingresar datos desde userName
                             }
                         }else { // si no es la primera vez iniciando el aplicativo
                             USER userFound; // creamos el USER que guarda el usuario al que se quiere acceder 
-                            RellenarCadena(userName,20);
-                            RellenarCadena(passWord,13);
+                            FillString(userName,20);
+                            FillString(passWord,13);
                             int index = binarySearchUserName(userName,&userFound);
                             if ( index ==-1){ // si el no usuario existe
                                 strcpy(warnings, "USUARIO NO EXISTENTE");
@@ -2867,12 +2819,14 @@ void LogIn(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white){ // Este mu
                                     if ( strcmp (" root              ", userName)==0){
                                         strcpy(userName," ");
                                         strcpy(passWord," ");
-                                        RootModule(renderer, font, white);
+                                        flag=0;
+                                        RootModule(renderer, font, color);
                                         writingUser=0;
                                         
                                     }else{
                                         strcpy(userName," ");
-                                        modulo2User(renderer, font, white, usuarioparamodulo2);
+                                        flag=0;
+                                        modulo2User(renderer, font, color, usuarioparamodulo2);
                                     }
                                 }else{
                                     strcpy(userName, " " );
@@ -2888,16 +2842,15 @@ void LogIn(SDL_Renderer *renderer , TTF_Font *font ,SDL_Color white){ // Este mu
             }
         }
     }
-        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
         // Limpiar pantalla
         SDL_RenderClear(renderer);
         
-        crearTexto(renderer , font, white, userName, 80,50); //renderiza el texto que contiene lo que el usuario vaya ingresando
-        crearTexto(renderer , font, white, titleOfModule, 5,10);
-        crearTexto(renderer , font, white, userNameLabel, 10,50); //renderiza la el texto "Usermame: " como indicativo
-        crearTexto(renderer,font,white, passHidded, 10,75);
-        crearTexto(renderer,font,white,warnings,10,120); //renderiza las advertencias que se tengan que hacer
-        crearTexto(renderer,font,white,warnings2,10,140); //renderiza las advertencias que se tengan que hacer
+        createText(renderer , font, color, userName, 80,50); //renderiza el texto que contiene lo que el usuario vaya ingresando
+        createText(renderer , font, color, titleOfModule, 5,10);
+        createText(renderer , font, color, userNameLabel, 10,50); //renderiza la el texto "Usermame: " como Indicative
+        createText(renderer,font,color, passHidded, 10,75);
+        createText(renderer,font,color,warnings,10,120); //renderiza las advertencias que se tengan que hacer
+        createText(renderer,font,color,warnings2,10,140); //renderiza las advertencias que se tengan que hacer
 
         // Actualizar pantalla
         SDL_RenderPresent(renderer);
@@ -2929,6 +2882,9 @@ void InitGraphics(SDL_Window **window, SDL_Renderer **renderer, TTF_Font **font)
     if (*font == NULL) {
         SDL_Log("No se pudo cargar la fuente! SDL_ttf Error: %s\n", TTF_GetError());
     }
+
+    // Establecer el color de fondo (RGB: rojo, verde, azul, alfa)
+    SDL_SetRenderDrawColor(*renderer, 255, 255, 255, 255); // Color blanco
 }
 
 void closeGraphics(SDL_Window *window, SDL_Renderer *renderer, TTF_Font *font) { // funcion para cerrar las librias graficas y terminar el aplicativo
@@ -2943,10 +2899,9 @@ int main(int argc, char* argv[]) {
     SDL_Window* window = NULL; // se crea una ventana (lienzo) donde vamos a poner nuestro contenido
     SDL_Renderer* renderer = NULL; // se crea el espacio que se quiere renderizar , render es lo que nos permite dibujar en el lienzo (window)
     TTF_Font* font = NULL; // TTF_Font es una variable para guarda la fuente que se utilizara y su tamaño
-    SDL_Color white = {0, 0, 0, 255}; 
-    
+    SDL_Color color = {0, 0, 0, 255}; 
     InitGraphics(&window, &renderer, &font); //llamamos la funcion InitGraphics para que esta le de valores a nuestras variables
-    LogIn(renderer, font, white); // Se inicia el programa como tal con el modulo 1;
+    LogIn(renderer, font, color); // Se inicia el programa como tal con el modulo 1;
     closeGraphics(window, renderer, font); // cerramos las librerias visuales y todo lo relacionado con los graficos
     return 0;
 }
